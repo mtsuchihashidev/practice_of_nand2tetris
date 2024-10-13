@@ -1,0 +1,39 @@
+(Loop)
+	@KBD
+	D=M
+	@White
+	D;JEQ
+(Black)
+	@i
+	M=0
+(Loopb)
+	@SCREEN
+	D=A
+	@i
+	A=M+D
+	M=-1
+	@i
+	MD=M+1
+	@8192
+	D=A-D
+    @Loopb
+	D;JGT
+	@Loop
+	0;JMP
+(White)
+	@i
+	M=0
+(Loopw)
+	@SCREEN
+	D=A
+	@i
+	A=M+D
+	M=0
+	@i
+	MD=M+1
+	@8192
+	D=A-D
+    @Loopw
+	D;JGT
+	@Loop
+	0;JMP

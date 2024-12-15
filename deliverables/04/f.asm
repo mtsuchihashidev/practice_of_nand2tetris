@@ -1,0 +1,18 @@
+	@8192
+    D=A
+	@number_of_pixel
+    M=D
+(FILL_SCREEN_LOOP)
+    @i
+    D=M
+    @number_of_pixel
+    D=M-D
+    @LOOP
+    D;JLT
+    @SCREEN
+    A=A+D
+    M=-1
+    @i
+    MD=M+1
+    @FILL_SCREEN_LOOP
+    0;JMP

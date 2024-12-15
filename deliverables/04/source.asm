@@ -14,8 +14,6 @@ D;JGE
 D=M
 @R2
 M=D+M
-@i
-M=M+1
 @Loop
 0;JMP
 (End)

@@ -1,0 +1,20 @@
+	@i
+	M=0
+	// 32x256=8192
+(Loopb)
+	@SCREEN
+	D=A
+	@i
+	A=D+M
+	M=-1
+	@8192
+	D=A
+	@i
+	D=D-M
+	@END
+	D;JEQ
+	@i
+	M=M+1
+	@Loopb
+	0;JMP
+(END)

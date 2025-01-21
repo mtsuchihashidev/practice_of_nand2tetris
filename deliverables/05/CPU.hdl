@@ -1,0 +1,124 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/5/CPU.hdl
+/**
+ * The Hack Central Processing unit (CPU).
+ * Parses the binary code in the instruction input and executes it according to the
+ * Hack machine language specification. In the case of a C-instruction, computes the
+ * function specified by the instruction. If the instruction specifies to read a memory
+ * value, the inM input is expected to contain this value. If the instruction specifies
+ * to write a value to the memory, sets the outM output to this value, sets the addressM
+ * output to the target address, and asserts the writeM output (when writeM = 0, any
+ * value may appear in outM).
+ * If the reset input is 0, computes the address of the next instruction and sets the
+ * pc output to that value. If the reset input is 1, sets pc to 0.
+ * Note: The outM and writeM outputs are combinational: they are affected by the
+ * instruction's execution during the current cycle. The addressM and pc outputs are
+ * clocked: although they are affected by the instruction's execution, they commit to
+ * their new values only in the next cycle.
+ */
+CHIP CPU {
+
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset==1) or continue executing
+                         // the current program (reset==0).
+
+    OUT outM[16],        // M value output
+        writeM,          // Write to M? 
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+
+    PARTS:
+		// 
+		// ** DECODER **
+		// 
+		Not(in=instruction[15], out=isAInstruction);
+
+		And(a=instruction[15], b=true, out=isCInstruction);
+		And(a=isCInstruction, b=instruction[12], out=a0);
+		And(a=isCInstruction, b=instruction[11], out=c1);
+		And(a=isCInstruction, b=instruction[10], out=c2);
+		And(a=isCInstruction, b=instruction[9], out=c3);
+		And(a=isCInstruction, b=instruction[8], out=c4);
+		And(a=isCInstruction, b=instruction[7], out=c5);
+		And(a=isCInstruction, b=instruction[6], out=c6);
+
+		And(a=isCInstruction, b=instruction[5], out=d1); // A Reg
+		And(a=isCInstruction, b=instruction[4], out=d2); // D Reg
+		And(a=isCInstruction, b=instruction[3], out=d3, out=writeM); // Memory
+		
+		And(a=isCInstruction, b=instruction[2], out=j1); // >
+		And(a=isCInstruction, b=instruction[1], out=j2); // =
+		And(a=isCInstruction, b=instruction[0], out=j3); // <
+
+		//
+		// *** A Register ***
+		// 
+		Mux16(a=outALU, b=instruction, sel=isAInstruction, out=inAReg);
+		// As C-INSTRUCTRION, "d1" is load flag.
+		And(a=isCInstruction, b=d1, out=isLoadAReg0);
+		Or(a=isAInstruction, b=isLoadAReg0, out=isLoadAReg);
+		ARegister(in=inAReg, load=isLoadAReg, out=outAReg, out[0..14]=addressM);
+
+		//
+		// *** D Register ***
+		//
+		// And(a=loadARegInstruction, b=d2, out=isLoadDReg);
+		// DRegister(in=outALU, load=isLoadDReg, out=outDReg);
+		DRegister(in=outALU, load=d2, out=outDReg);
+
+		//
+		// *** ALU ***
+		// 
+		// input decided by "a", if a == 1 then M, else A
+		Mux16(a=outAReg, b=inM, sel=a0, out=inALURight);
+		// zr: out=0, ng: out<0
+		ALU(x=outDReg, y=inALURight, zx=c1, nx=c2, zy=c3, ny=c4, f=c5, no=c6, out=outM, out=outALU, zr=zrALU, ng=ngALU);
+
+		//
+		// *** PC ***
+		//
+		Not(in=zrALU, out=notZrALU);
+		Not(in=ngALU, out=notNgALU);
+		And(a=notZrALU, b=notNgALU, out=pvALU);
+		And(a=ngALU, b=j1, out=j11);
+		And(a=zrALU, b=j2, out=j22);
+		And(a=pvALU, b=j3, out=j33);
+
+		Not(in=j11, out=nj11);
+		Not(in=j22, out=nj22);
+		Not(in=j33, out=nj33);
+		// JGT
+		And(a=nj11, b=nj22, out=jgt0);
+		And(a=jgt0, b=j33, out=jgt);
+		// JEQ
+		And(a=nj11, b=j22, out=jeq0);
+		And(a=jeq0, b=nj33, out=jeq);
+		// JGE
+		And(a=nj11, b=j22, out=jge0);
+		And(a=jge0, b=j33, out=jge);
+		// JLT
+		And(a=j11, b=nj22, out=jlt0);
+		And(a=jlt0, b=nj33, out=jlt);
+		// JNE
+		And(a=j11, b=nj22, out=jne0);
+		And(a=jne0, b=j33, out=jne);
+		// JLE
+		And(a=j11, b=j22, out=jle0);
+		And(a=jle0, b=nj33, out=jle);
+		// JMP
+		And(a=j11, b=j22, out=jmp0);
+		And(a=jmp0, b=j33, out=jmp);
+
+		// do jump
+		And(a=nj11, b=nj22, out=djmp0);
+		And(a=djmp0, b=nj33, out=djmp1);
+		Not(in=djmp1, out=djmp);
+
+		PC(in=outAReg, inc=true, load=djmp, reset=reset, out[0..14]=pc);
+		
+
+}

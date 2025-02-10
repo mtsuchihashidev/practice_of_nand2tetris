@@ -1,6 +1,5 @@
 #!/usr/bin/python
 # -*- coding: utf-8  -*-
-
 class Code:
     def dest(self, mnemonic:str) -> str:
         if mnemonic == 'M':
@@ -78,6 +77,8 @@ class Code:
             return '0' + '010101'
         elif mnemonic == 'D|M':
             return '1' + '010101'
+        elif mnemonic is None:
+            return '0000000'
         else:
             # TODO
             raise Exception()

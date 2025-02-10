@@ -11,10 +11,10 @@ from CommandType import A_COMMAND, C_COMMAND, L_COMMAND, CommandType
 RX_FILENAME = re.compile(r'.*[A-Z]\w+\.asm$', re.S)
 RX_COMMENT = re.compile(r'^//', re.S)
 RX_DECIMAL = re.compile(r'^\d+$', re.S)
-RX_A_COMMAND = re.compile(r'^@(\w)$', re.S)
+RX_A_COMMAND = re.compile(r'^@([A-Za-z0-9_.$:]+)$', re.S)
 # TODO もう少し精緻化
-RX_C_COMMAND = re.compile(r'^([^=]+)=([^;]+)(:?;(\w+))?$', re.S)
-RX_L_COMMAND = re.compile(r'^\((\w+)\)%', re.S)
+RX_C_COMMAND = re.compile(r'^(?:([ADM]+)=)?([-+&|!01AMD]+)(?:;([JGTLEQNMP]{3}))?$', re.S)
+RX_L_COMMAND = re.compile(r'^\(([A-Za-z0-9_.$:]+)\)', re.S)
 
 class Parser:
     def __init__(self, filename):
@@ -131,7 +131,7 @@ class Parser:
         if command_type != C_COMMAND:
             raise ParseError()
         mo = RX_C_COMMAND.search(command)
-        return mo[3] or EMPTY
+        return mo[3]
 
 
     def __getCurrentCommand(self):

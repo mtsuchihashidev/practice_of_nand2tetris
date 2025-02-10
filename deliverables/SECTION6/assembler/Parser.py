@@ -42,7 +42,7 @@ class Parser:
         self.__index = -1
         self.__size = len(self.__command_list)
 
-    def hasMoreCommands(self)->bool:
+    def has_more_commands(self)->bool:
         """
         入力にまだコマンドが存在するか？
         """
@@ -54,7 +54,7 @@ class Parser:
         このルーチンはhasMoreCommand()がtrueの場合のみ呼ぶようにする。
         最初は現コマンドは空である。
         """
-        if not self.hasMoreCommands():
+        if not self.has_more_commands():
             raise ExistNoCommandError()
         self.__index += 1
 

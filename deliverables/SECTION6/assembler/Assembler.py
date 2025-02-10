@@ -14,7 +14,7 @@ def main(params):
     parser = Parser(filename)
     code = Code()
     hack_list = []
-    while parser.hasMoreCommands():
+    while parser.has_more_commands():
         parser.advance()
         binary = ''
         command_type = parser.command_type()

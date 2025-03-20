@@ -15,14 +15,14 @@ class CodeWriter:
         """
         asm_filename = f"{Utils.get_corename(filename)}.asm"
         self.__fw = open(asm_filename, 'w')
+        self.__is_done_init = False
     def set_file_name(self, filename:str):
         """
         CodeWriterモジュールに新しいVMファイルの変換が開始したことを知らせる。
         """
         self.__classname = Utils.get_corename(filename)
         # TODO REMOVE
-        # self.__function = None
-        self.__function = self.__Function("Karitaiou")
+        self.__function_name = "Karitaiou"
         self.__eq_cnt = 0
         self.__gt_cnt = 0
         self.__lt_cnt = 0
@@ -38,7 +38,8 @@ class CodeWriter:
         stmt.append('M=D')
         self.__fw.write('\n'.join(stmt) + "\n")
         # TODO
-        
+
+        self.__is_done_init = True
     def write_arithmetic(self, command:str):
         """
         与えられた算術コマンドをアセンブリコードに変換し、それを書き込む。
@@ -330,8 +331,7 @@ class CodeWriter:
         """
         labelコマンドを行うアセンブリコードを書く
         """
-        self.__function.set_label_name(label)
-        label = self.__function.get_label_name()
+        label = f"{self.__function_name}${label}"
         stmt = []
         stmt.append(f"({label})")
         self.__write(stmt)
@@ -339,7 +339,7 @@ class CodeWriter:
         """
         gotoコマンドを行うアセンブリコードを書く
         """
-        label = self.__function.get_label_name()
+        label = f"{self.__function_name}${label}"
         stmt = []
         stmt.append(f"@{label}")
         stmt.append('0;JMP')
@@ -348,7 +348,7 @@ class CodeWriter:
         """
         if-gotoコマンドを行うアセンブリコードを書く
         """
-        label = self.__function.get_label_name()
+        label = f"{self.__function_name}${label}"
         stmt = []
         stmt.append('@SP')
         stmt.append('M=M-1')
@@ -381,28 +381,8 @@ class CodeWriter:
             return
         self.__fw.close()
     def __write(self, stmt: list):
+        if not self.__is_done_init:
+            return
         self.__fw.write('\n'.join(stmt) + "\n")
-
-    class __Function:
-        def __init__(self, function_name:str):
-            self.__function_name = function_name
-            self.__static_variable_name = None
-            self.__label_name = None
-        def get_name(self):
-            return self.__function_name
-        def get_return_address(self):
-            return f"{self.__function_name}:return_address"
-        def set_static_variable_name(self, name:str):
-            self.__static_variable_name = name
-        def get_static_variable_name(self):
-            if not self.__static_variable_name:
-                raise Exception('__Function: set static variable name yet')
-            return f"{self.__function_name}.{self.__static_variable_name}"
-        def set_label_name(self, name:str):
-            self.__label_name = name
-        def get_label_name(self):
-            if not self.__label_name:
-                raise Exception('__Function: set label name yet')
-            return f"{self.__function_name}${self.__label_name}"
 
 # EOF

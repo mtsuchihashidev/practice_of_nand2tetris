@@ -12,65 +12,87 @@ from CommandType import C_ARITHMETIC, C_PUSH, C_POP, \
 from Utils import Utils
 
 class Main:
-    @staticmethod
-    def execute(params:list)->int:
-        vmpgm = params[0]
-        filelist = []
-        if isdir(vmpgm):
-            for fd in listdir(vmpgm):
+    def __init__(self, vm_program: str):
+        self.__vm_program = vm_program
+        self.__filelist = []
+        if isdir(self.__vm_program):
+            for fd in listdir(self.__vm_program):
                 if not isfile(fd):
                     continue
                 if splitext(fd)[1] != '.vm':
                     continue
-                filelist.append(fd)
-        elif isfile(vmpgm):
-            filelist.append(vmpgm)
+                self.__filelist.append(fd)
+        elif isfile(self.__vm_program):
+            self.__filelist.append(self.__vm_program)
         else:
-            raise Exception(f"invalid input: {vmpgm}")
-        program_name = Utils.get_corename(vmpgm)
-        code_writer = CodeWriter(program_name)
-        code_writer.write_init()
-        for filename in filelist:
-            code_writer.set_file_name(filename)
+            raise Exception(f"invalid input: {vm_program}")
+        self.__program_name = Utils.get_corename(self.__vm_program)
+        self.__code_writer = CodeWriter(self.__program_name)
+
+    def __to_asm(self, filename):
+        parser = Parser(filename)
+        while parser.has_more_commands():
+            parser.advance()
+            command_type = parser.command_type()
+            if command_type == C_ARITHMETIC:
+                command = parser.arg1()
+                self.__code_writer.write_arithmetic(command)
+            elif command_type in (C_PUSH, C_POP):
+                arg1 = parser.arg1()
+                arg2 = parser.arg2()
+                self.__code_writer.write_push_pop(command_type, arg1, int(arg2))
+            elif command_type == C_LABEL:
+                arg1 = parser.arg1()
+                self.__code_writer.write_label(arg1)
+            elif command_type == C_GOTO:
+                arg1 = parser.arg1()
+                self.__code_writer.write_goto(arg1)
+            elif command_type == C_IF:
+                arg1 = parser.arg1()
+                self.__code_writer.write_if(arg1)
+            elif command_type == C_CALL:
+                arg1 = parser.arg1()
+                arg2 = parser.arg2()
+                self.__code_writer.write_call(arg1, int(arg2))
+            elif command_type == C_FUNCTION:
+                arg1 = parser.arg1()
+                arg2 = parser.arg2()
+                self.__code_writer.write_function(arg1, int(arg2))
+            elif command_type == C_RETURN:
+                self.__code_writer.write_return()
+            else:
+                raise Exception(f"invalid command: {command_type.__class__.__name__}")
+
+    def __dry_run(self):
+        for filename in self.__filelist:
+            self.__code_writer.set_file_name(filename)
             try:
-                parser = Parser(filename)
-                while parser.has_more_commands():
-                    parser.advance()
-                    command_type = parser.command_type()
-                    if command_type == C_ARITHMETIC:
-                        command = parser.arg1()
-                        code_writer.write_arithmetic(command)
-                    elif command_type in (C_PUSH, C_POP):
-                        arg1 = parser.arg1()
-                        arg2 = parser.arg2()
-                        code_writer.write_push_pop(command_type, arg1, int(arg2))
-                    elif command_type == C_LABEL:
-                        arg1 = parser.arg1()
-                        code_writer.write_label(arg1)
-                    elif command_type == C_GOTO:
-                        arg1 = parser.arg1()
-                        code_writer.write_goto(arg1)
-                    elif command_type == C_IF:
-                        arg1 = parser.arg1()
-                        code_writer.write_if(arg1)
-                    elif command_type == C_CALL:
-                        arg1 = parser.arg1()
-                        arg2 = parser.arg2()
-                        code_writer.write_call(arg1, int(arg2))
-                    elif command_type == C_FUNCTION:
-                        arg1 = parser.arg1()
-                        arg2 = parser.arg2()
-                        code_writer.write_function(arg1, int(arg2))
-                    elif command_type == C_RETURN:
-                        code_writer.write_return()
-                    else:
-                        raise Exception(f"invalid command: {command_type.__classname__}")
+                self.__to_asm(filename)
+            except Exception as e:
+                self.__code_writer.close()
+                raise e
+
+    def __run(self):
+        for filename in self.__filelist:
+            self.__code_writer.set_file_name(filename)
+            try:
+                self.__to_asm(filename)
             except Exception as e:
                 raise e
             finally:
-                code_writer.close()
-        return 0
+                self.__code_writer.close()
 
+    def __exec(self):
+        code_writer = self.__code_writer
+        self.__dry_run()
+        self.__code_writer.write_init()
+        self.__run()
+        return 0
+        
+    @staticmethod
+    def execute(params:list)->int:
+        m = Main(params[0])
+        return m.__exec()
 
 if __name__ == '__main__':
     exit(Main.execute(sys.argv[1:]))

@@ -1,13 +1,13 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from os.path import splitext
+import sys
 
 from CommandType import C_PUSH, C_POP, CommandType
 from Utils import Utils
 
 
 class CodeWriter:
-    __TRUE = 65535
     __FALSE = 0
     def __init__(self, filename:str):
         """
@@ -15,17 +15,14 @@ class CodeWriter:
         """
         asm_filename = f"{Utils.get_corename(filename)}.asm"
         self.__fw = open(asm_filename, 'w')
-        stmt = []
-        stmt.append('@256')
-        stmt.append('D=A')
-        stmt.append('@SP')
-        stmt.append('M=D')
-        self.__fw.write('\n'.join(stmt) + "\n")
     def set_file_name(self, filename:str):
         """
         CodeWriterモジュールに新しいVMファイルの変換が開始したことを知らせる。
         """
         self.__classname = Utils.get_corename(filename)
+        # TODO REMOVE
+        # self.__function = None
+        self.__function = self.__Function("Karitaiou")
         self.__eq_cnt = 0
         self.__gt_cnt = 0
         self.__lt_cnt = 0
@@ -34,7 +31,14 @@ class CodeWriter:
         VMの初期化（これは「ブートストラップ」と呼ばれる）を行うアセンブリコードを書く。
         このコードは出力ファイルの先頭に配置しなければならない。
         """
-        pass
+        stmt = []
+        stmt.append('@256')
+        stmt.append('D=A')
+        stmt.append('@SP')
+        stmt.append('M=D')
+        self.__fw.write('\n'.join(stmt) + "\n")
+        # TODO
+        
     def write_arithmetic(self, command:str):
         """
         与えられた算術コマンドをアセンブリコードに変換し、それを書き込む。
@@ -51,21 +55,9 @@ class CodeWriter:
         cmd = command.lower()
         stmt = []
         if cmd == 'add':
-            # # A=0
-            # stmt.append('@SP')
-            # # M[0] = M[0] - 1  # prev address
-            # stmt.append('M=M-1')
-            # # A = M[0]
-            # stmt.append('A=M')
             stmt = get_stack_pop_asm()
             # D = M[A]
             stmt.append('D=M')
-            # # A=0
-            # stmt.append('@SP')
-            # # M[0] = M[0] - 1  # prev address
-            # stmt.append('M=M-1')
-            # # A = M[0]
-            # stmt.append('A=M')
             stmt = stmt + get_stack_pop_asm()
             # M[A] = D + M[A]
             stmt.append('M=D+M')
@@ -107,7 +99,6 @@ class CodeWriter:
             # IF TRUE
             stmt.append(f"({eq_true})")
             # A = 0xEFFF
-            # stmt.append(f"@{self.__TRUE}")
             stmt.append('@0')
             stmt.append('A=!A')
             # D = A
@@ -146,7 +137,6 @@ class CodeWriter:
             # IF TRUE
             stmt.append(f"({gt_true})")
             # A = 0xFFFF
-            # stmt.append(f"@{self.__TRUE}")
             stmt.append('@0')
             stmt.append('A=!A')
             # D = A
@@ -185,7 +175,6 @@ class CodeWriter:
             # IF TRUE
             stmt.append(f"({lt_true})")
             # A = 0xFFFF
-            # stmt.append(f"@{self.__TRUE}")
             stmt.append('@0')
             stmt.append('A=!A')
             # D = A
@@ -220,7 +209,7 @@ class CodeWriter:
         # SP + 1
         stmt.append('@SP')
         stmt.append('M=M+1')
-        self.__fw.write('\n'.join(stmt) + "\n")
+        self.__write(stmt)
     def write_push_pop(self, command:CommandType, segment:str, index:int):
         """
         C_PUSHまたはC_POPコマンドをアセンブリコードに変換し、それを書き込む。
@@ -265,9 +254,6 @@ class CodeWriter:
                 for _ in range(index):
                     stmt.append('A=A+1')
                 stmt.append('D=M')
-                # stmt.append(f"@{index}")
-                # stmt.append('A=D+A')
-                # stmt.append('D=M')
             elif seg == 'pointer':
                 if index > 1:
                     raise Exception(f"out of index at pointer segment: {index} > 1")
@@ -337,28 +323,40 @@ class CodeWriter:
                 stmt.append('M=D')
             else:
                 raise Exception(f"invalid segment: {seg}")
-            # stmt.append('@SP')
-            # stmt.append('A=M')
-            # stmt.append('D=M')
-            # stmt.append('M=D')
         else:
             pass
-        self.__fw.write('\n'.join(stmt) + "\n")
-    def write_level(self, label:str):
+        self.__write(stmt)
+    def write_label(self, label:str):
         """
         labelコマンドを行うアセンブリコードを書く
         """
-        pass
+        self.__function.set_label_name(label)
+        label = self.__function.get_label_name()
+        stmt = []
+        stmt.append(f"({label})")
+        self.__write(stmt)
     def write_goto(self, label:str):
         """
         gotoコマンドを行うアセンブリコードを書く
         """
-        pass
+        label = self.__function.get_label_name()
+        stmt = []
+        stmt.append(f"@{label}")
+        stmt.append('0;JMP')
+        self.__write(stmt)
     def write_if(self, label:str):
         """
         if-gotoコマンドを行うアセンブリコードを書く
         """
-        pass
+        label = self.__function.get_label_name()
+        stmt = []
+        stmt.append('@SP')
+        stmt.append('M=M-1')
+        stmt.append('A=M')
+        stmt.append('D=M')
+        stmt.append(f"@{label}")
+        stmt.append('D;JNE')
+        self.__write(stmt)
     def write_call(self, function_name: str, num_args: int):
         """
         callコマンドを行うアセンブリコードを書く
@@ -373,7 +371,8 @@ class CodeWriter:
         """
         fuctionコマンドを行うアセンブリコードを書く
         """
-        pass
+        self.__function = __Function(function_name)
+        # TODO
     def close(self):
         """
         出力ファイルを閉じる。
@@ -381,7 +380,29 @@ class CodeWriter:
         if not self.__fw:
             return
         self.__fw.close()
+    def __write(self, stmt: list):
+        self.__fw.write('\n'.join(stmt) + "\n")
 
-
+    class __Function:
+        def __init__(self, function_name:str):
+            self.__function_name = function_name
+            self.__static_variable_name = None
+            self.__label_name = None
+        def get_name(self):
+            return self.__function_name
+        def get_return_address(self):
+            return f"{self.__function_name}:return_address"
+        def set_static_variable_name(self, name:str):
+            self.__static_variable_name = name
+        def get_static_variable_name(self):
+            if not self.__static_variable_name:
+                raise Exception('__Function: set static variable name yet')
+            return f"{self.__function_name}.{self.__static_variable_name}"
+        def set_label_name(self, name:str):
+            self.__label_name = name
+        def get_label_name(self):
+            if not self.__label_name:
+                raise Exception('__Function: set label name yet')
+            return f"{self.__function_name}${self.__label_name}"
 
 # EOF

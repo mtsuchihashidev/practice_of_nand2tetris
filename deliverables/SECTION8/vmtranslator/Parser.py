@@ -58,20 +58,20 @@ class Parser:
             return C_PUSH
         elif cmd == 'pop':
             return C_POP
-        # elif cmd == 'pop':
-        #     return C_POP:
-        # elif cmd == 'pop':
-        #     return C_POP:
-        # elif cmd == 'pop':
-        #     return C_POP:
-        # elif cmd == 'pop':
-        #     return C_POP:
-        # elif cmd == 'pop':
-        #     return C_POP:
-        # elif cmd == 'pop':
-        #     return C_POP:
-        # elif cmd == 'pop':
-        #     return C_POP:
+        elif cmd == 'label':
+            return C_LABEL
+        elif cmd == 'goto':
+            return C_GOTO
+        elif cmd == 'if-goto':
+            return C_IF
+        elif cmd == 'function':
+            return C_FUNCTION
+        elif cmd == 'call':
+            return C_CALL
+        elif cmd == 'return':
+            return C_RETURN
+        else:
+             raise Exception(f"unsupport command: {cmd}")   
     def arg1(self)->str:
         """
         現コマンドの最初の引数が返される。
@@ -80,11 +80,11 @@ class Parser:
         """
         cmd_type = self.command_type()
         if cmd_type == C_RETURN:
-            raise Exception('invalid call: arg1')
+            raise Exception(f"invalid call: arg1 ({cmd_type.__class__.__name__})")
         elif cmd_type == C_ARITHMETIC:
             return self.__command.lower()
         else:
-            return self.__arg1.lower()
+            return self.__arg1
     def arg2(self)->int:
         """
         現コマンドの2番めの引数が返される。
@@ -94,7 +94,7 @@ class Parser:
         if cmd_type in (C_PUSH, C_POP, C_FUNCTION, C_CALL):
             return self.__arg2
         else:
-            raise Exception('invalid call: arg2')
+            raise Exception(f"invalid call: arg2 ({cmd_type.__class__.__name__})")
             
 
 

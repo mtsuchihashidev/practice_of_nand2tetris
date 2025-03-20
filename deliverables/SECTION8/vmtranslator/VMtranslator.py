@@ -29,6 +29,7 @@ class Main:
             raise Exception(f"invalid input: {vmpgm}")
         program_name = Utils.get_corename(vmpgm)
         code_writer = CodeWriter(program_name)
+        code_writer.write_init()
         for filename in filelist:
             code_writer.set_file_name(filename)
             try:
@@ -43,6 +44,27 @@ class Main:
                         arg1 = parser.arg1()
                         arg2 = parser.arg2()
                         code_writer.write_push_pop(command_type, arg1, int(arg2))
+                    elif command_type == C_LABEL:
+                        arg1 = parser.arg1()
+                        code_writer.write_label(arg1)
+                    elif command_type == C_GOTO:
+                        arg1 = parser.arg1()
+                        code_writer.write_goto(arg1)
+                    elif command_type == C_IF:
+                        arg1 = parser.arg1()
+                        code_writer.write_if(arg1)
+                    elif command_type == C_CALL:
+                        arg1 = parser.arg1()
+                        arg2 = parser.arg2()
+                        code_writer.write_call(arg1, int(arg2))
+                    elif command_type == C_FUNCTION:
+                        arg1 = parser.arg1()
+                        arg2 = parser.arg2()
+                        code_writer.write_function(arg1, int(arg2))
+                    elif command_type == C_RETURN:
+                        code_writer.write_return()
+                    else:
+                        raise Exception(f"invalid command: {command_type.__classname__}")
             except Exception as e:
                 raise e
             finally:

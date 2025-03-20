@@ -29,6 +29,12 @@ class CodeWriter:
         self.__eq_cnt = 0
         self.__gt_cnt = 0
         self.__lt_cnt = 0
+    def write_init(self):
+        """
+        VMの初期化（これは「ブートストラップ」と呼ばれる）を行うアセンブリコードを書く。
+        このコードは出力ファイルの先頭に配置しなければならない。
+        """
+        pass
     def write_arithmetic(self, command:str):
         """
         与えられた算術コマンドをアセンブリコードに変換し、それを書き込む。
@@ -338,7 +344,36 @@ class CodeWriter:
         else:
             pass
         self.__fw.write('\n'.join(stmt) + "\n")
-            
+    def write_level(self, label:str):
+        """
+        labelコマンドを行うアセンブリコードを書く
+        """
+        pass
+    def write_goto(self, label:str):
+        """
+        gotoコマンドを行うアセンブリコードを書く
+        """
+        pass
+    def write_if(self, label:str):
+        """
+        if-gotoコマンドを行うアセンブリコードを書く
+        """
+        pass
+    def write_call(self, function_name: str, num_args: int):
+        """
+        callコマンドを行うアセンブリコードを書く
+        """
+        pass
+    def write_return(self):
+        """
+        returnコマンドを行うアセンブリコードを書く
+        """
+        pass
+    def write_function(self, function_name: str, num_locals: int):
+        """
+        fuctionコマンドを行うアセンブリコードを書く
+        """
+        pass
     def close(self):
         """
         出力ファイルを閉じる。

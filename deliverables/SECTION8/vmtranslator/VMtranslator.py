@@ -3,6 +3,7 @@
 import sys
 from os import listdir
 from os.path import isdir, isfile, splitext, basename
+import re
 
 from Parser import Parser
 from CodeWriter import CodeWriter
@@ -10,6 +11,8 @@ from CommandType import C_ARITHMETIC, C_PUSH, C_POP, \
     C_LABEL, C_GOTO, C_IF, \
     C_FUNCTION, C_RETURN, C_CALL
 from Utils import Utils
+
+RX_SYS_INIT = re.compile(r'Sys.init', re.S)
 
 class Main:
     def __init__(self, vm_program: str):
@@ -26,6 +29,15 @@ class Main:
             self.__filelist.append(self.__vm_program)
         else:
             raise Exception(f"invalid input: {vm_program}")
+        # TODO search "Sys.init"
+        self.__sys_init_filename = ''
+        for filename in self.__filelist:
+            with open(filename, 'r') as fi:
+                if not RX_SYS_INIT.search(fi.read()):
+                    continue
+                if has_sys_init:
+                    raise Exception(f"duplicate Sys.init. abort.")
+                self.__sys_init_filename = True
         self.__program_name = Utils.get_corename(self.__vm_program)
         self.__code_writer = CodeWriter(self.__program_name)
 
@@ -84,7 +96,8 @@ class Main:
 
     def __exec(self):
         code_writer = self.__code_writer
-        self.__dry_run()
+        # self.__dry_run()
+        self.__code_writer.set_file_name(self.__sys_init_filename)
         self.__code_writer.write_init()
         self.__run()
         return 0

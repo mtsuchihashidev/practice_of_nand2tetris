@@ -16,13 +16,20 @@ class CodeWriter:
         asm_filename = f"{Utils.get_corename(filename)}.asm"
         self.__fw = open(asm_filename, 'w')
         self.__is_done_init = False
+        self.__global_stack_size = 0
+        self.__local_size = 0
+        self.__argument_size = 0
+        self.__this_size = 0
+        self.__that_size = 0
+        self.__call_count = dict()
     def set_file_name(self, filename:str):
         """
         CodeWriterモジュールに新しいVMファイルの変換が開始したことを知らせる。
         """
         self.__classname = Utils.get_corename(filename)
         # TODO REMOVE
-        self.__function_name = "Karitaiou"
+        # self.__function_name = "Karitaiou"
+        self.__functionname = "Karitaiou"
         self.__eq_cnt = 0
         self.__gt_cnt = 0
         self.__lt_cnt = 0
@@ -31,6 +38,11 @@ class CodeWriter:
         VMの初期化（これは「ブートストラップ」と呼ばれる）を行うアセンブリコードを書く。
         このコードは出力ファイルの先頭に配置しなければならない。
         """
+        self.__functionname = "Sys.init"
+        self.__eq_cnt = 0
+        self.__gt_cnt = 0
+        self.__lt_cnt = 0
+
         stmt = []
         stmt.append('@256')
         stmt.append('D=A')
@@ -223,6 +235,7 @@ class CodeWriter:
             raise Exception(f"invalid index: {index}")
         # indexが上限を超えたらどうする？
         if command == C_PUSH:
+            self.__global_stack_size += 1
             # only 1 in the vm
             if seg == 'constant':
                 if index > 32767:
@@ -274,6 +287,7 @@ class CodeWriter:
             # M[SP] = M[SP] + 1
             stmt.append('M=M+1')
         elif command == C_POP:
+            self.__global_stack_size -= 1
             # POP M->D
             stmt.append('@SP')
             stmt.append('M=M-1')
@@ -331,7 +345,9 @@ class CodeWriter:
         """
         labelコマンドを行うアセンブリコードを書く
         """
-        label = f"{self.__function_name}${label}"
+        # label = f"{self.__functionname}${label}"
+        # label = f"{self.__get_functionname()}${label}"
+        label = self.__get_label(label)
         stmt = []
         stmt.append(f"({label})")
         self.__write(stmt)
@@ -339,7 +355,8 @@ class CodeWriter:
         """
         gotoコマンドを行うアセンブリコードを書く
         """
-        label = f"{self.__function_name}${label}"
+        # label = f"{self.__function_name}${label}"
+        label = self.__get_label(label)
         stmt = []
         stmt.append(f"@{label}")
         stmt.append('0;JMP')
@@ -348,7 +365,9 @@ class CodeWriter:
         """
         if-gotoコマンドを行うアセンブリコードを書く
         """
-        label = f"{self.__function_name}${label}"
+        self.__global_stack_size -= 1
+        # label = f"{self.__function_name}${label}"
+        label = self.__get_label(label)
         stmt = []
         stmt.append('@SP')
         stmt.append('M=M-1')
@@ -361,7 +380,10 @@ class CodeWriter:
         """
         callコマンドを行うアセンブリコードを書く
         """
-        pass
+        if not self.__call_count[function_name]:
+            self.__call_count[function_name] = -1
+        self.__call_count[function_name] += 1
+        return_address = f"CALL.self.__call_count[function_name]"
     def write_return(self):
         """
         returnコマンドを行うアセンブリコードを書く
@@ -372,7 +394,11 @@ class CodeWriter:
         fuctionコマンドを行うアセンブリコードを書く
         """
         self.__function = __Function(function_name)
-        # TODO
+        # TODO write FUNCITON-LABEL
+        # TODO backup caller ARG, LCL, THIS, THAT
+        # TODO setup ARG, LCL of this CALLED-FUNCTION
+        
+        
     def close(self):
         """
         出力ファイルを閉じる。
@@ -384,5 +410,9 @@ class CodeWriter:
         if not self.__is_done_init:
             return
         self.__fw.write('\n'.join(stmt) + "\n")
-
+    def __get_label(self, label:str)->str:
+        return f"{self.__get_functionname()}${label}"
+    def __get_functionname(self):
+        return f"{self.__classname}.{self.__functionname}"
+    
 # EOF

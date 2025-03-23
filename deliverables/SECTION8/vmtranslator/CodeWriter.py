@@ -28,7 +28,6 @@ class CodeWriter:
         """
         self.__classname = Utils.get_corename(filename)
         # TODO REMOVE
-        # self.__function_name = "Karitaiou"
         self.__functionname = "Karitaiou"
         self.__eq_cnt = 0
         self.__gt_cnt = 0
@@ -43,12 +42,12 @@ class CodeWriter:
         self.__gt_cnt = 0
         self.__lt_cnt = 0
 
-        stmt = []
-        stmt.append('@256')
-        stmt.append('D=A')
-        stmt.append('@SP')
-        stmt.append('M=D')
-        self.__fw.write('\n'.join(stmt) + "\n")
+        # stmt = []
+        # stmt.append('@256')
+        # stmt.append('D=A')
+        # stmt.append('@SP')
+        # stmt.append('M=D')
+        # self.__fw.write('\n'.join(stmt) + "\n")
         # TODO
 
         self.__is_done_init = True
@@ -58,10 +57,7 @@ class CodeWriter:
         """
         def get_stack_pop_asm()->list:
             stmt = []
-            # A=0
-            stmt.append('@SP')
-            # M[0] = M[0] - 1  # prev address
-            stmt.append('M=M-1')
+            stmt = self.__backward_sp(stmt)
             # A = M[0]
             stmt.append('A=M')
             return stmt
@@ -219,9 +215,7 @@ class CodeWriter:
             stmt.append('M=!M')
         else:
             raise Exception('Not ARITHMETIC command')
-        # SP + 1
-        stmt.append('@SP')
-        stmt.append('M=M+1')
+        stmt = self.__forward_sp(stmt)
         self.__write(stmt)
     def write_push_pop(self, command:CommandType, segment:str, index:int):
         """
@@ -282,15 +276,11 @@ class CodeWriter:
             stmt.append('A=M')
             # M[A] = D
             stmt.append('M=D')
-            # A = SP
-            stmt.append('@SP')
-            # M[SP] = M[SP] + 1
-            stmt.append('M=M+1')
+            stmt = self.__forward_sp(stmt)
         elif command == C_POP:
             self.__global_stack_size -= 1
-            # POP M->D
-            stmt.append('@SP')
-            stmt.append('M=M-1')
+            # # POP M->D
+            stmt = self.__backward_sp(stmt)
             # A = M[SP]
             stmt.append('A=M')
             # D = M[A] (D = M[(M[SP])])
@@ -345,8 +335,6 @@ class CodeWriter:
         """
         labelコマンドを行うアセンブリコードを書く
         """
-        # label = f"{self.__functionname}${label}"
-        # label = f"{self.__get_functionname()}${label}"
         label = self.__get_label(label)
         stmt = []
         stmt.append(f"({label})")
@@ -355,7 +343,6 @@ class CodeWriter:
         """
         gotoコマンドを行うアセンブリコードを書く
         """
-        # label = f"{self.__function_name}${label}"
         label = self.__get_label(label)
         stmt = []
         stmt.append(f"@{label}")
@@ -366,11 +353,9 @@ class CodeWriter:
         if-gotoコマンドを行うアセンブリコードを書く
         """
         self.__global_stack_size -= 1
-        # label = f"{self.__function_name}${label}"
         label = self.__get_label(label)
         stmt = []
-        stmt.append('@SP')
-        stmt.append('M=M-1')
+        stmt = self.__backward_sp(stmt)
         stmt.append('A=M')
         stmt.append('D=M')
         stmt.append(f"@{label}")
@@ -383,22 +368,131 @@ class CodeWriter:
         if not self.__call_count[function_name]:
             self.__call_count[function_name] = -1
         self.__call_count[function_name] += 1
-        return_address = f"CALL.self.__call_count[function_name]"
+        return_address_element = []
+        return_address_element.append("RETURN")
+        self.__functionname = function_name
+        return_address_element.append(self.__get_functionname())
+        return_address_element.append(self.__call_count[function_name])
+        return_address = ".".join(return_address_element)
+
+        def push_base_address(symbol:str, stmt:list)->list:
+            stmt.append(f"@{symbol}")
+            stmt.append('A=M')
+            stmt.append('D=A')
+            stmt.append('@SP')
+            stmt.append('A=M')
+            stmt.append('M=D')
+            return self.__forward_sp(stmt)
+        stmt = []
+        # push return-address
+        stmt.append(f"@{return_address}")
+        stmt.append('D=A')
+        stmt.append('@SP')
+        stmt.append('A=M')
+        stmt.append('M=D')
+        stmt = self.__forward_sp(stmt)
+        # push LCL
+        stmt = push_base_address('LCL', stmt)
+        # push ARG
+        stmt = push_base_address('ARG', stmt)
+        # push THIS
+        stmt = push_base_address('THIS', stmt)
+        # push THAT
+        stmt = push_base_address('THAT', stmt)
+        # called-function's ARG
+        stmt.append('@ARG')
+        stmt.append('D=M')
+        # len([ret-adrss, LCL, ARG, THIS, THAT]) -> 5
+        for _ in range(num_args + 5):
+            stmt.append('D=D-1')
+        stmt.append('@ARG')
+        stmt.append('M=D')
+        # TODO ???? does SP progress? or not?
+        # LCL = SP
+        stmt.append('@SP')
+        stmt.append('D=M')
+        stmt.append('@LCL')
+        stmt.append('M=D')
+        # goto f
+        stmt.append(f"@{function_name}")
+        stmt.append('0;JMP')
+        # label return-address
+        stmt.append(f"({return_address})")
+        self.__write(stmt)
     def write_return(self):
         """
         returnコマンドを行うアセンブリコードを書く
         """
-        pass
+        def backward(frame:str, symbol:str, num:int, stmt:list)->list:
+            # THAT = *(FRAME - 1)
+            stmt.append(f"@{frame}")
+            stmt.append('A=M')
+            for _ in range(num):
+                stmt.append('A=A-1')
+            stmt.append('D=M')
+            stmt.append(f"@{symbol}")
+            stmt.append('M=D')
+            return stmt
+        # frame = 'RETURN:FRAME'
+        frame = 'R13'
+        ret = 'R14'
+        stmt = []
+        # FRAME = LCL
+        stmt.append('@LCL')
+        stmt.append('D=M')
+        stmt.append(f"@{frame}")
+        stmt.append('M=D')
+        # RET = *(FRAME - 5)
+        stmt.append('@LCL')
+        stmt.append('D=M')
+        for _ in range(5):
+            stmt.append('D=D-1')
+        stmt.append(f"@{ret}")
+        stmt.append('M=D')
+        # *ARG = pop()
+        stmt = self.__backward_sp(stmt)
+        stmt.append('@SP')
+        stmt.append('A=M')
+        stmt.append('D=M')
+        stmt.append('@ARG')
+        stmt.append('A=M')
+        stmt.append('M=D')
+        # SP = ARG + 1
+        stmt.append('@ARG')
+        stmt.append('A=M')
+        stmt.append('D=A+1')
+        stmt.append('@SP')
+        stmt.append('M=D')
+        # THAT = *(FRAME - 1)
+        stmt = backward(frame, 'THAT', 1, stmt)
+        # THIS = *(FRAME - 2)
+        stmt = backward(frame, 'THIS', 2, stmt)
+        # ARG = *(FRAME - 3)
+        stmt = backward(frame, 'ARG', 3, stmt)
+        # LCL = *(FRAME - 4)
+        stmt = backward(frame, 'LCL', 4, stmt)
+        # goto RET
+        stmt.append(f"@{ret}")
+        stmt.append('A=M')
+        stmt.append('0;JMP')
+        self.__write(stmt)
     def write_function(self, function_name: str, num_locals: int):
         """
         fuctionコマンドを行うアセンブリコードを書く
         """
-        self.__function = __Function(function_name)
-        # TODO write FUNCITON-LABEL
-        # TODO backup caller ARG, LCL, THIS, THAT
-        # TODO setup ARG, LCL of this CALLED-FUNCTION
-        
-        
+        stmt = []
+        stmt.append(f"({function_name})")
+        # progress SP to num_locals
+        for _ in range(num_locals):
+            stmt = self.__forward_sp(stmt)
+        # initialize LCL 0
+        stmt.append('@LCL')
+        stmt.append('A=M')
+        for _ in range(num_locals - 1):
+            stmt.append('M=0')
+            stmt.append('A=A+1')
+        stmt.append('M=0')
+        self.__write(stmt)        
     def close(self):
         """
         出力ファイルを閉じる。
@@ -412,7 +506,30 @@ class CodeWriter:
         self.__fw.write('\n'.join(stmt) + "\n")
     def __get_label(self, label:str)->str:
         return f"{self.__get_functionname()}${label}"
-    def __get_functionname(self):
-        return f"{self.__classname}.{self.__functionname}"
-    
+    def __get_functionname(self)->str:
+        # return f"{self.__classname}.{self.__functionname}"
+        return f"{self.__functionname}"
+    def __forward_sp(self, stmt:list)->list:
+        return self.__forward_ram_address('SP', stmt)
+    def __backward_sp(self, stmt:list)->list:
+        return self.__backward_ram_address('SP', stmt)    
+    def __forward_ram_address(self, symbol:str, stmt:list)->list:
+        # A = SYMBOL
+        stmt.append(f"@{symbol}")
+        # M[SYMBOL] = M[SYMBOL] + 1
+        stmt.append('M=M+1')
+        return stmt
+    def __backward_ram_address(self, symbol:str, stmt:list)->list:
+        # A = SYMBOL
+        stmt.append(f"@{symbol}")
+        # M[SYMBOL] = M[SYMBOL] - 1 # prev address
+        stmt.append('M=M-1')
+        return stmt
+
+
+
+
+
+
+
 # EOF

@@ -12,7 +12,7 @@ from CommandType import C_ARITHMETIC, C_PUSH, C_POP, \
     C_FUNCTION, C_RETURN, C_CALL
 from Utils import Utils
 
-RX_SYS_INIT = re.compile(r'Sys.init', re.S)
+RX_SYS_INIT = re.compile(r'function\s+Sys.init', re.S)
 
 class Main:
     def __init__(self, vm_program: str):
@@ -35,9 +35,9 @@ class Main:
             with open(filename, 'r') as fi:
                 if not RX_SYS_INIT.search(fi.read()):
                     continue
-                if has_sys_init:
+                if self.__sys_init_filename:
                     raise Exception(f"duplicate Sys.init. abort.")
-                self.__sys_init_filename = True
+                self.__sys_init_filename = filename
         self.__program_name = Utils.get_corename(self.__vm_program)
         self.__code_writer = CodeWriter(self.__program_name)
 
@@ -75,24 +75,15 @@ class Main:
             else:
                 raise Exception(f"invalid command: {command_type.__class__.__name__}")
 
-    def __dry_run(self):
-        for filename in self.__filelist:
-            self.__code_writer.set_file_name(filename)
-            try:
-                self.__to_asm(filename)
-            except Exception as e:
-                self.__code_writer.close()
-                raise e
-
     def __run(self):
-        for filename in self.__filelist:
-            self.__code_writer.set_file_name(filename)
-            try:
+        try:
+            for filename in self.__filelist:
+                self.__code_writer.set_file_name(filename)
                 self.__to_asm(filename)
-            except Exception as e:
-                raise e
-            finally:
-                self.__code_writer.close()
+        except Exception as e:
+            raise e
+        finally:
+            self.__code_writer.close()
 
     def __exec(self):
         code_writer = self.__code_writer

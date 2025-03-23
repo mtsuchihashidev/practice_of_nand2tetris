@@ -41,13 +41,53 @@ class CodeWriter:
         self.__eq_cnt = 0
         self.__gt_cnt = 0
         self.__lt_cnt = 0
+        self.__call_count['Sys.init'] = -1
 
-        # stmt = []
+        stmt = []
+        # # # # M[SP] = 256
+        # # # stmt.append('@256')
+        # # # stmt.append('D=A')
+        # # # stmt.append('@SP')
+        # # # stmt.append('M=D')
+        # # M[LCL] = 256
         # stmt.append('@256')
+        # stmt.append('D=A')
+        # stmt.append('@LCL')
+        # stmt.append('M=D')
+        # # M[ARG] = 257
+        # stmt.append('@257')
+        # stmt.append('D=A')
+        # stmt.append('@ARG')
+        # stmt.append('M=D')
+        # # M[THIS] = 258
+        # stmt.append('@258')
+        # stmt.append('D=A')
+        # stmt.append('@THIS')
+        # stmt.append('M=D')
+        # # M[THAT] = 259
+        # stmt.append('@259')
+        # stmt.append('D=A')
+        # stmt.append('@THAT')
+        # stmt.append('M=D')
+        # # M[POINTER] = 260
+        # stmt.append('@9999')
+        # stmt.append('D=A')
+        # stmt.append('@260')
+        # stmt.append('M=D')
+        # # M[SP] = 261
+        # stmt.append('@261')
         # stmt.append('D=A')
         # stmt.append('@SP')
         # stmt.append('M=D')
         # self.__fw.write('\n'.join(stmt) + "\n")
+        # # # call Sys.init
+        # # TODO DEBUG
+        # self.__fw.write('\n'.join(['@9001']) + "\n")
+        # self.write_call('Sys.init', 0)
+        # # stmt.append('@Sys.init')
+        # # stmt.append('0;JMP')
+        
+        
         # TODO
 
         self.__is_done_init = True
@@ -365,14 +405,14 @@ class CodeWriter:
         """
         callコマンドを行うアセンブリコードを書く
         """
-        if not self.__call_count[function_name]:
+        if not function_name in self.__call_count or not self.__call_count[function_name]:
             self.__call_count[function_name] = -1
         self.__call_count[function_name] += 1
         return_address_element = []
         return_address_element.append("RETURN")
         self.__functionname = function_name
         return_address_element.append(self.__get_functionname())
-        return_address_element.append(self.__call_count[function_name])
+        return_address_element.append(str(self.__call_count[function_name]))
         return_address = ".".join(return_address_element)
 
         def push_base_address(symbol:str, stmt:list)->list:
@@ -400,7 +440,7 @@ class CodeWriter:
         # push THAT
         stmt = push_base_address('THAT', stmt)
         # called-function's ARG
-        stmt.append('@ARG')
+        stmt.append('@SP')        
         stmt.append('D=M')
         # len([ret-adrss, LCL, ARG, THIS, THAT]) -> 5
         for _ in range(num_args + 5):
@@ -480,6 +520,7 @@ class CodeWriter:
         """
         fuctionコマンドを行うアセンブリコードを書く
         """
+        self.__functionname = function_name
         stmt = []
         stmt.append(f"({function_name})")
         # progress SP to num_locals

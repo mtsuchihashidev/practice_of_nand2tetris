@@ -4,5 +4,6 @@
 *~
 
 # directories
+__pycache__/
 
 # links

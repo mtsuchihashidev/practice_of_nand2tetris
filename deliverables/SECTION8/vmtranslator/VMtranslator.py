@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import sys
 from os import listdir
-from os.path import isdir, isfile, splitext, basename
+from os.path import isdir, isfile, splitext, basename, join
 import re
 
 from Parser import Parser
@@ -16,20 +16,21 @@ RX_SYS_INIT = re.compile(r'function\s+Sys.init', re.S)
 
 class Main:
     def __init__(self, vm_program: str):
-        Log.debug(f"***** vm_program: {vm_program}")
         self.__vm_program = vm_program
         self.__filelist = []
         if isdir(self.__vm_program):
             for fd in listdir(self.__vm_program):
-                if not isfile(fd):
+                fl = join(self.__vm_program, fd)
+                if not isfile(fl):
                     continue
-                if splitext(fd)[1] != '.vm':
+                if splitext(fl)[1] != '.vm':
                     continue
-                self.__filelist.append(fd)
+                self.__filelist.append(fl)
         elif isfile(self.__vm_program):
             self.__filelist.append(self.__vm_program)
         else:
             raise Exception(f"invalid input: {vm_program}")
+
         # TODO search "Sys.init"
         self.__sys_init_filename = ''
         for filename in self.__filelist:

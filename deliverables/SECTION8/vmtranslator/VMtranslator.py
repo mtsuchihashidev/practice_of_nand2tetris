@@ -10,12 +10,13 @@ from CodeWriter import CodeWriter
 from CommandType import C_ARITHMETIC, C_PUSH, C_POP, \
     C_LABEL, C_GOTO, C_IF, \
     C_FUNCTION, C_RETURN, C_CALL
-from Utils import Utils
+from Utils import Utils, Log
 
 RX_SYS_INIT = re.compile(r'function\s+Sys.init', re.S)
 
 class Main:
     def __init__(self, vm_program: str):
+        Log.debug(f"***** vm_program: {vm_program}")
         self.__vm_program = vm_program
         self.__filelist = []
         if isdir(self.__vm_program):

@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+from argparse import ArgumentParser as ap
 import sys
 from os import listdir
 from os.path import isdir, isfile, splitext, basename, join
@@ -101,6 +102,12 @@ class Main:
         return m.__exec()
 
 if __name__ == '__main__':
+    parser = ap(prog="VMtraslator", usage='%(prog)s filename [option]')
+    parser.add_argument('filename')
+    parser.add_argument('-d', '--debug', action='store_true')
+
+    args = parser.parse_args()
+    Log.init(args.debug)
     exit(Main.execute(sys.argv[1:]))
 
 # EOF

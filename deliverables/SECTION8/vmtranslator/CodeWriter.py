@@ -4,7 +4,8 @@ from os.path import splitext
 import sys
 
 from CommandType import C_PUSH, C_POP, CommandType
-from Utils import Utils
+from Utils import Utils, Log
+
 
 
 class CodeWriter:
@@ -15,13 +16,13 @@ class CodeWriter:
         """
         asm_filename = f"{Utils.get_corename(filename)}.asm"
         self.__fw = open(asm_filename, 'w')
-        self.__is_done_init = False
         self.__global_stack_size = 0
         self.__local_size = 0
         self.__argument_size = 0
         self.__this_size = 0
         self.__that_size = 0
         self.__call_count = dict()
+        self.__return_count = 0
     def set_file_name(self, filename:str):
         """
         CodeWriterモジュールに新しいVMファイルの変換が開始したことを知らせる。
@@ -42,7 +43,8 @@ class CodeWriter:
         self.__gt_cnt = 0
         self.__lt_cnt = 0
         self.__call_count['Sys.init'] = -1
-
+        Log.debug("write_init")
+        
         stmt = []
         # # # # M[SP] = 256
         # # # stmt.append('@256')
@@ -87,10 +89,19 @@ class CodeWriter:
         # # stmt.append('@Sys.init')
         # # stmt.append('0;JMP')
         
+        # M[SP] = 256
+        stmt.append('@256')
+        # stmt.append('@251')
+        stmt.append('D=A')
+        stmt.append('@SP')
+        stmt.append('M=D')
+        Log.debug("write_init: call self.__write")
+        self.__write(stmt)
+        Log.debug("write_init: call self.write_call")
+        self.write_call('Sys.init', 0)
+        # stmt.append('@Sys.init')
+        # stmt.append('0;JMP')
         
-        # TODO
-
-        self.__is_done_init = True
     def write_arithmetic(self, command:str):
         """
         与えられた算術コマンドをアセンブリコードに変換し、それを書き込む。
@@ -200,6 +211,8 @@ class CodeWriter:
         elif cmd == 'lt':
             lt_true = f"{self.__classname}.{self.__lt_cnt}.LTTRUE"
             lt_end = f"{self.__classname}.{self.__lt_cnt}.LTEND"
+            # lt_true = f"{self.__get_functionname()}.{self.__lt_cnt}.LTTRUE"
+            # lt_end = f"{self.__get_functionname()}.{self.__lt_cnt}.LTEND"
             self.__lt_cnt += 1
             stmt = get_stack_pop_asm()
             # D = M[A]
@@ -405,16 +418,22 @@ class CodeWriter:
         """
         callコマンドを行うアセンブリコードを書く
         """
-        if not function_name in self.__call_count or not self.__call_count[function_name]:
-            self.__call_count[function_name] = -1
-        self.__call_count[function_name] += 1
-        return_address_element = []
-        return_address_element.append("RETURN")
-        self.__functionname = function_name
-        return_address_element.append(self.__get_functionname())
-        return_address_element.append(str(self.__call_count[function_name]))
-        return_address = ".".join(return_address_element)
-
+        Log.debug(f"write_call: {function_name}")
+        # if not function_name in self.__call_count or not self.__call_count[function_name]:
+        #     self.__call_count[function_name] = -1
+        # self.__call_count[function_name] += 1
+        # return_address_element = []
+        # return_address_element.append("RETURN")
+        # prev_funcitonname = self.__functionname
+        # self.__functionname = f"{self.__functionname}.{function_name}"
+        # return_address_element.append(self.__get_functionname())
+        # return_address_element.append(str(self.__call_count[function_name]))
+        # return_address = ".".join(return_address_element)
+        # self.__functionname = prev_funcitonname
+        return_address = f"RETURN:{self.__return_count}"
+        self.__return_count += 1
+        Log.debug(f"write_call: return_address: {return_address}")
+        
         def push_base_address(symbol:str, stmt:list)->list:
             stmt.append(f"@{symbol}")
             stmt.append('A=M')
@@ -425,6 +444,7 @@ class CodeWriter:
             return self.__forward_sp(stmt)
         stmt = []
         # push return-address
+        Log.debug(f"write_call: push return_address")
         stmt.append(f"@{return_address}")
         stmt.append('D=A')
         stmt.append('@SP')
@@ -458,11 +478,13 @@ class CodeWriter:
         stmt.append('0;JMP')
         # label return-address
         stmt.append(f"({return_address})")
+        Log.debug("write_call: call self.__write")
         self.__write(stmt)
     def write_return(self):
         """
         returnコマンドを行うアセンブリコードを書く
         """
+        Log.debug("write_return")
         def backward(frame:str, symbol:str, num:int, stmt:list)->list:
             # THAT = *(FRAME - 1)
             stmt.append(f"@{frame}")
@@ -482,11 +504,20 @@ class CodeWriter:
         stmt.append('D=M')
         stmt.append(f"@{frame}")
         stmt.append('M=D')
+        # # RET = *(FRAME - 5)
+        # stmt.append('@LCL')
+        # stmt.append('D=M')
+        # for _ in range(5):
+        #     stmt.append('D=D-1')
+        # stmt.append(f"@{ret}")
+        # stmt.append('M=D')
         # RET = *(FRAME - 5)
-        stmt.append('@LCL')
+        stmt.append('@5')
+        stmt.append('D=A')
+        stmt.append(f"@{frame}")
+        # stmt.append('D=M-D')
+        stmt.append('A=M-D')
         stmt.append('D=M')
-        for _ in range(5):
-            stmt.append('D=D-1')
         stmt.append(f"@{ret}")
         stmt.append('M=D')
         # *ARG = pop()
@@ -515,11 +546,13 @@ class CodeWriter:
         stmt.append(f"@{ret}")
         stmt.append('A=M')
         stmt.append('0;JMP')
+        Log.debug("write_return: call self.__write")
         self.__write(stmt)
     def write_function(self, function_name: str, num_locals: int):
         """
         fuctionコマンドを行うアセンブリコードを書く
         """
+        Log.debug(f"write_function: {function_name} {num_locals}")
         self.__functionname = function_name
         stmt = []
         stmt.append(f"({function_name})")
@@ -533,6 +566,7 @@ class CodeWriter:
             stmt.append('M=0')
             stmt.append('A=A+1')
         stmt.append('M=0')
+        Log.debug("write_function: call self.__write")
         self.__write(stmt)        
     def close(self):
         """
@@ -542,8 +576,7 @@ class CodeWriter:
             return
         self.__fw.close()
     def __write(self, stmt: list):
-        if not self.__is_done_init:
-            return
+        Log.debug(f"__write")
         self.__fw.write('\n'.join(stmt) + "\n")
     def __get_label(self, label:str)->str:
         return f"{self.__get_functionname()}${label}"

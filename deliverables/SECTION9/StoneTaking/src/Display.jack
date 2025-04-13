@@ -1,0 +1,48 @@
+class Display {
+  field int lines;
+  constructor Display new() {
+	let lines = 0;
+	return this;
+  }
+  method void clearScreen() {
+	if (lines < 23 ) {
+	  return;
+	}
+	do Screen.clearScreen();
+	let lines = 0;
+	return;
+  }
+  method void incrementLines() {
+	let lines = lines + 1;
+	return;
+  }
+  method int readInt(String msg) {
+	var int num;
+	do clearScreen();
+	// do Output.printInt(lines);
+	let num = Keyboard.readInt(msg);
+	do incrementLines();
+	return num;
+  }
+  method void printLineln(String msg) {
+	do clearScreen();
+	// do Output.printInt(lines);
+	do Output.printString(msg);
+	do Output.println();
+	do incrementLines();
+	return;
+  }
+  method void println(Array msgs, int size) {
+	var int i;
+	let i = 0;
+	do clearScreen();
+	// do Output.printInt(lines);
+	while ( i < size) {
+	  do Output.printString(msgs[i]);
+	  let i = i + 1;
+	}
+	do Output.println();
+	do incrementLines();
+	return;
+  }
+}

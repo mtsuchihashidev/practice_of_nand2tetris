@@ -1,0 +1,98 @@
+class Main {
+  
+  function void main() {
+	var int i, restStones, takings, comTakings;
+	var boolean isGameOver;
+	var Display d;
+	var Array msgs;
+	let d = Display.new();
+	do d.printLineln("The Stone Taking");
+	do d.printLineln("There are 20 stones in here. ");
+	do d.printLineln("You can take 1 or 2 or 3 stones there.");
+	do d.printLineln("If you will take some stone and rest is 0, you win.");
+	let restStones = 20;
+	let takings = 0;
+	let comTakings = 0;
+	while (restStones > 0) {
+	  let takings = d.readInt("How many stones do you take? (1-3) ");
+	  if ((takings > 3) | (takings = 0)) {
+		let msgs = Array.new(3);
+		let msgs[0] = "You don't take ";
+		let msgs[1] = Main.parseInt(takings);
+		let msgs[2] = " stones.";
+		do d.println(msgs, 3);
+		do d.printLineln("It's 1 - 3 stones only.");
+	  } else {
+		let restStones = restStones - takings;
+		do Main.printPlayerTakings(d, takings);
+		let isGameOver = Main.judgeGameOver(restStones);
+		if (isGameOver) {
+		  do Main.printPlayerWin(d);
+		} else {
+		  do Main.printRestStones(d, restStones);
+		 
+		  let comTakings = 4 - takings;
+		  let restStones = restStones - comTakings;
+		  do Main.printComputerTakings(d, comTakings);
+		  let isGameOver = Main.judgeGameOver(restStones);
+		  if (isGameOver) {
+			do Main.printPlayerLose(d);		 	 
+		  } else {
+			do Main.printRestStones(d, restStones);
+		  }
+		}
+	  }
+	}
+	return;
+  }
+  function String parseInt(int num) {
+	var String s;
+	let s = String.new(2);
+	do s.setInt(num);
+	return s;
+  }
+  function void printPlayerTakings(Display d, int takings) {
+	var Array msgs;
+	let msgs = Array.new(3);
+	let msgs[0] = "You take ";
+	let msgs[1] = Main.parseInt(takings);
+	let msgs[2] = " stones.";
+	do d.println(msgs, 3);
+	return;
+  }
+  function void printComputerTakings(Display d, int takings) {
+	var Array msgs;
+	let msgs = Array.new(3);
+	let msgs[0] = "I take ";
+	let msgs[1] = Main.parseInt(takings);
+	let msgs[2] = " stones.";
+	do d.println(msgs, 3);
+	return;
+  }
+  function void printPlayerLose(Display d) {
+	do d.printLineln("Rested no stones");
+	do d.printLineln("You lose");
+	return;
+  }
+  function void printPlayerWin(Display d) {
+	do d.printLineln("Rested no stones");
+	do d.printLineln("You won");
+	return;
+  }
+  function void printRestStones(Display d, int restStones) {
+	var Array msgs;
+	let msgs = Array.new(3);
+	let msgs[0] = "Rested ";
+	let msgs[1] = Main.parseInt(restStones);
+	let msgs[2] = " stones.";
+	do d.println(msgs, 3);
+	return;
+  }
+  function boolean judgeGameOver(int restStones) {
+	if (restStones > 0) {
+	  return false;
+	} else {
+	  return true;
+	}
+  }
+}

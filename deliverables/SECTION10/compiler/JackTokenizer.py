@@ -16,11 +16,39 @@ __SYMBOL__ = set([
     '{', '}', '(', ')', '[', ']', '.', ',', ';', '+', '-', 
     '*', '/', '&', '|', '<', '>', '=', '~'
     ])
+__KEYWORD__ = {
+    'class': K_CLASS,
+    'constructor': K_CONSTRUCTOR,
+    'function': K_FUNCTION,
+    'method': K_METHOD,
+    'field': K_FIELD,
+    'static': K_STATIC,
+    'var': K_VAR,
+    'int': K_INT,
+    'char': K_CHAR,
+    'boolean': K_BOOLEAN,
+    'void': K_VOID,
+    'true': K_TRUE,
+    'false': K_FALSE,
+    'null': K_NULL,
+    'this': K_THIS,
+    'let': K_LET,
+    'do': K_DO,
+    'if': K_IF,
+    'else': K_ELSE,
+    'while': K_WHILE,
+    'return': K_RETURN
+    }
+
+RX_STR_CONST = re.compile(r'"[^"]*"', re.S)
+RX_IDENTIFIER = re.compile(r'[A-Za-z][0-9A-Za-z]+', re.S)
+RX_NUMBER = re.compile(r'[0-9]+', re.S)
+
 class Tokenizer:
     def __init__(self, src:str):
         self.src = src
         self.limit = len(src)
-        self.tokens = []
+        self.__tokens = []
 
     def tokenize(self):
         i = 0
@@ -43,10 +71,14 @@ class Tokenizer:
                 i += 1
                 continue
             j = self.fetch_identifier(i)
-            if j > i:
+            if j >= i:
                 # print(f"identifier: (i, j) = ({i}, {j}): {self.fetch(i, j)}", file=sys.stderr)
-                self.set_token(self.fetch(i, j))
-                i = j
+                if j > i:
+                    self.set_token(self.fetch(i, j))
+                    i = j + 1
+                else:
+                    self.set_token(self.get(i))
+                    i = i + 1
                 continue
             j = self.fetch_blank(i)
             if j >= i:
@@ -55,9 +87,12 @@ class Tokenizer:
                 continue
             i += 1
 
+    def get_tokens(self):
+        return self.__tokens
+
     def set_token(self, token:str):
         # print(token, file=sys.stderr)
-        self.tokens.append(token)
+        self.__tokens.append(token)
 
     def get(self, i:int)->str:
         self.valid_range(i)
@@ -133,21 +168,19 @@ class Tokenizer:
 
     def fetch_identifier(self, s:int)->int:
         c0 = self.get(s)
-        if not self.is_upper_letter(c0) and not self.is_lower_letter(c0):
+        if not self.is_upper_letter(c0) \
+           and not self.is_lower_letter(c0):
             return -1
         j = s + 1
         while j < self.limit - 1:
             c1 = self.get(j)
-            if self.is_lower_letter(c1):
-                j += 1
-                continue
-            if self.is_upper_letter(c1):
-                j += 1
-                continue
-            if self.is_number_letter(c1):
-                j += 1
-                continue
-            return j - 1
+            is_target = False
+            is_target = is_target | self.is_lower_letter(c1)
+            is_target = is_target | self.is_upper_letter(c1)
+            is_target = is_target | self.is_number_letter(c1)
+            if not is_target:
+                return j - 1
+            j += 1
         return -1
 
     def is_upper_letter(self, s:str)->bool:
@@ -171,36 +204,65 @@ class JackTokenizer:
             contents = fi.read()
         tokenizer = Tokenizer(contents)
         tokenizer.tokenize()
-        self.__tokens = tokenizer.tokens
+        self.__tokens = tokenizer.get_tokens()
         print(self.__tokens)
+        self.__cidx = -1
+        self.__capacity = len(self.__tokens)
+        self.__ctoken = ''
 
 
     def __is_symbol(self, char:str)->bool:
         return char in __SYMBOL__
 
     def has_more_tokens(self)->bool:
-        pass
+        return self.__cidx < self.__capacity
 
     def advance(self):
-        pass
+        self.__cidx += 1
+        self.__ctoken = self.__tokens[self.__cidx]
 
     def token_type(self)->TokenType:
-        pass
+        if self.__cidx >= self.__capacity:
+            raise Exception('no more token')
+        if self.__ctoken in __KEYWORD__.keys():
+            return T_KEYWORD
+        elif self.__ctoken in __SYMBOL__:
+            return T_SYMBOL
+        elif RX_STR_CONST.match(self.__ctoken, re.S):
+            return T_STRING_CONST
+        elif RX_IDENTIFIER.match(self.__ctoken, re.S):
+            return T_IDENTIFIER
+        elif mo := RX_NUMBER.match(self.__ctoken, re.S):
+            n = int(mo[0])
+            if n >= 0 and n <= 32767:
+                return T_INT_CONST
+        raise Exepction(f"no support: {self.__ctoken}")
 
     def keyword(self)->KeywordType:
-        pass
+        if self.__ctoken not in __KEYWORD__.keys():
+            raise Exception(f"no support: {self.__ctoken}")
+        return __KEYWORD__[self.__ctoken]
 
     def symbol(self)->str:
-        pass
+        return self.__ctoken
 
-    def idenfitier(self)->str:
-        pass
+    def identifier(self)->str:
+        return self.__ctoken
 
     def int_val(self)->int:
-        pass
+        mo = RX_NUMBER.match(self.__ctoken, re.S)
+        if not mo:
+            raise Exception(f"no support: {self.__ctoken}")
+        n = int(mo[0])
+        if n < 0 or n > 32767:
+            raise Exception(f"no support: {self.__ctoken}")
+        return n
 
     def string_val(self)->str:
-        pass
+        # TODO remove "?
+        return self.__ctoken
+
+
 
 
 # EOF

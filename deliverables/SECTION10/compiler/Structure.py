@@ -117,7 +117,7 @@ class SVarDec(Node):
     def __init__(self):
         super().__init__('varDec')
 
-class SStatement(Node):
+class SStatements(Node):
     def __init__(self):
         super().__init__('statement')
 
@@ -192,7 +192,7 @@ if __name__ == '__main__':
     v.add(SIdentifier('game'))
     v.add(SSymbol(';'))
 
-    stmt = SStatement()
+    stmt = SStatements()
     sbdy.add(stmt)
 
     lstmt = SLetStatement()

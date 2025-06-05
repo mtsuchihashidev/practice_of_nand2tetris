@@ -42,21 +42,18 @@ class CompilationEngine:
         tkn.advance()
         sclass.add(SSymbol(tkn.symbol()))
 
-
-
         pre_root = self.__root
         # classVarDec*
         tkn.advance()
         self.compile_class_var_dec()
 
         # subroutineDec*
-        #self.compile_subroutine()
+        self.compile_subroutine()
         
         self.__root = pre_root
 
         # # }
-        # tkn.advance()
-        # sclass.add(SSymbol(tkn.symbol()))
+        sclass.add(SSymbol(tkn.symbol()))
 
         logic = XmlLogic(self.__basename)
         sclass.operate(logic)
@@ -74,10 +71,11 @@ class CompilationEngine:
                 scvd.add(SKeyword('field'))
             else:
                 return
-        
+
+            # type
             tkn.advance()
-            var_type = tkn.identifier()
-            scvd.add(SIdentifier(var_type))
+            if not self.__compile_type(scvd):
+                raise Exception()
 
             tkn.advance()
             var_name = tkn.identifier()
@@ -94,47 +92,258 @@ class CompilationEngine:
             scvd.add(SSymbol(sym))
             self.__root.add(scvd)
             tkn.advance()
-        
+
+    def __compile_type(self, node):
+        tkn = self.__tokenizer
+        if tkn.token_type() == T_KEYWORD():
+            kwd = tkn.kewword()
+            if kwd == K_INT:
+                node.add(SKeyword('int'))
+            elif kwd == K_CHAR:
+                node.add(SKeyword('char'))
+            elif kwd == K_BOOLEAN:
+                node.add(SKeyword('boolean'))
+            else:
+                return False
+        elif tkn.token_type() == T_IDENTIFIER:
+            node.add(SIdentifier(tkn.identifier()))
+        else:
+            return False
+        return True
 
     def compile_subroutine(self):
         """メソッド、ファンクション、コンストラクタをコンパイルする
         """
-        # ('constructor', 'function', 'method')
-        # ('void', type)
-        # subtoutineName
-        # '('
-        # parameterList
-        # self.compile_parameter_list()
-        # ')'
-        # ** subroutineBody **
-        # '{'
-        # varDec*
-        # self.compile_varDec()
-        # statements
-        # self.compile_statements()
-        # '}'
-        pass
+        tkn = self.__tokenizer
+        while True:
+            # ('constructor', 'function', 'method')
+            if tkn.token_type() != T_KEYWORD:
+                raise Exception()
+            kwd = tkn.keyword()
+            ssbd = SSubroutineDec()
+            self.__root.add(ssbd)
+            if kwd = K_CONSTRUCTOR:
+                ssbd.add(SKeyword('constructor'))
+            elif kwd == K_FUNCTION:
+                ssbd.add(SKeyword('function'))
+            elif kwd == K_METHOD:
+                ssbd.add(SKeyword('method'))
+            else:
+                raise Exception()
+
+            # ('void', type)
+            tkn.advance()
+            if tkn.token_type() == T_KEYWORD:
+                kwd = tkn.kewword()
+                if kwd == K_VOID:
+                    ssbd.add(SKeyword('void'))
+                else:
+                    if not self.__compile_type(ssbd):
+                        raise Exception()
+            else:
+                if not self.__compile_type(ssbd):
+                    raise Exception()
+
+            # subtoutineName
+            tkn.advance()
+            if tkn.token_type() != T_IDENTIFIER:
+                raise Exception()
+            ssbd.add(SIdentifier(tkn.identifier()))
+            # '('
+            tkn.advance()
+            if tkn.token_type() != T_SYMBOL:
+                raise Exception()
+            ssbd.add(SSymbol(tkn.symbol()))
+            # parameterList
+            pre = self.__root
+            tkn.advance()
+            self.compile_parameter_list()
+            self.__root = pre
+            # ')'
+            if tkn.token_type() != T_SYMBOL:
+                raise Exception()
+            ssbd.add(SSymbol(tkn.symbol()))
+
+            # ** subroutineBody **
+            # '{'
+            tkn.advance()
+            if tkn.token_type() != T_SYMBOL:
+                raise Exception()
+            ssbd.add(SSymbol(tkn.symbol()))
+            # varDec*
+            tkn.advance()
+            pre = self.__root
+            self.compile_varDec()
+            self.__root = pre
+
+            # statements
+            pre = self.__root
+            self.compile_statements()
+            self.__root = pre
+            # '}'
+            tkn.advance()
+            if tkn.token_type() != T_SYMBOL:
+                raise Exception()
+            ssbd.add(SSymbol(tkn.symbol()))
+
+            tkn.advance()
+            if tkn.token_type() == T_SYMBOL \
+               and tkn.symbol() == '}':
+                break
 
     def compile_parameter_list(self):
         """パラメータのリスト（空の可能性あり）をコンパイルする。
         カッコ”（）”は含まない。
         """
+        tkn = self.__tokenizer
+
         # ((type varName) (',' type varName)*)?
-        pass
+        prms = SParameterList()
+        self.__root.add(prms)
+
+        # type
+        if not self.__compile_type(prms):
+            raise Exception
+
+        # varName
+        tkn.advance()
+        if tkn.token_type() != T_IDENTIFIER:
+            raise Exception()
+        prms.add(SIdentifier(tkn.identifier()))
+
+        tkn.advance()
+        while tkn.token_type() == T_SYMBOL and tkn.symbol() == ',':
+            prms.add(SSymbol(tkn.symbol()))
+            # type
+            if not self.__compile_type(prms):
+                raise Exception
+
+            # varName
+            tkn.advance()
+            if tkn.token_type() != T_IDENTIFIER:
+                raise Exception()
+            prms.add(SIdentifier(tkn.identifier()))
+
+            tnk.advance()
 
     def compile_var_dec(self):
         """var宣言をコンパイルする
         """
-        # 'var' type varName (',' varName)* ';'
-        pass
+        tkn == self.__tokenizer
+
+        def is_var_dec():
+            return tkn.token_type() == T_KEYWORD() and tkn.keyword() == K_VAR
+
+        while is_var_dec():
+            svd = SVarDec()
+            self.__root.add(svd)
+            # 'var' type varName (',' varName)* ';'
+            # 'var'
+            svd.add(SKeyword(tkn.keyword()))
+
+            # type
+            if not self.__compile_type(svd):
+                raise Exception()
+
+            # varName
+            if tkn.token_type() != T_IDENTIFIER:
+                raise Exception()
+            svd.add(SIdentifier(tkn.identifier()))
+
+            tkn.advance()
+            while tkn.token_type() == T_SYMBOL and tkn.symbol() == ',':
+                # ','
+                svd.add(SSymbol(','))
+
+                # varName
+                if tkn.token_type() != T_IDENTIFIER:
+                    raise Exception()
+                svd.add(SIdentifier(tkn.identifier()))
+
+                tkn.advance()
+            # ';'
+            svd.add(SSymbol(tkn.symbol()))
+
+            tkn.advance()
 
     def compile_statements(self):
         """一連の文をコンパイルする。波括弧は含まない。
         """
+        tkn = self.__tokenizer
+
+        sstmts = SStatements()
+        self.__root.add(sstmts)
+
+        def is_statement():
+            if not tkn.token_type() == T_KEYWORD:
+                return False
+            if tkn.keyrowd() not in (K_LET, K_IF, K_WHILE, \
+                                     K_DO, K_RETURN):
+                return False
+            return True
+            
         # statements*
         # --------------------
         # letStatement | ifStatement | whileStatement | doStatement | returnStatement
-        pass
+        pre = self.__root
+        self.__root = sstmts
+        while is_statement():
+            kwd = tkn.keyword()
+            if kwd == K_LET:
+                self.compile_let()
+            elif kwd == K_IF:
+                self.compile_if()
+            elif kwd == K_WHILE:
+                self.compile_while()
+            elif kwd == K_DO:
+                self.compile_do()
+            elif kwd == K_RETURN:
+                self.compile_return()
+        self.__root = pre
+        
+
+    def compile_let(self):
+        """let文をコンパイルする
+        """
+        tkn = self.__tokenizer
+        lstmt = SLetStatement()
+        self.__root.add(lstmt)
+        
+        # 'let' varName ('[' expression ']' )? '=' expression ';'
+
+        # 'let'
+        lstmt.add(SKeyword('let'))
+
+        # varName
+        tkn.advance()
+        lstmt.add(SIdentifier(tkn.identifier()))
+        tkn.advance()
+        if tkn.token_type() == T_SYMBOL and tkn.symbol() == '[':
+            # '['
+            lstmt.add(SSymbol(tkn.symbol()))
+            # expression
+            tkn.advance()
+            pre = self.__root
+            self.__root = lstmt
+            self.compile_expression()
+            self.__root = pre
+            # ']'
+            lstmt.add(SSymbol(tkn.symbol()))
+
+            tkn.advance()
+        # '='
+        lstmt.add(SSymbol(tkn.symbol()))
+        # expression
+        tkn.advance()
+        pre = self.__root
+        self.__root = lstmt
+        self.compile_expression()
+        self.__root = pre
+        # ';'
+        lstmt.add(SSymbol(tkn.symbol()))
+
+        tkn.advance()
+        
 
     def compile_do(self):
         """do文をコンパイルする
@@ -149,12 +358,6 @@ class CompilationEngine:
         #    (className | varName) '.' subroutineName '(' expressionList ')'
 
         # ';'
-        pass
-
-    def compile_let(self):
-        """let文をコンパイルする
-        """
-        # 'let' varName ('[' expression ']' )? '=' expression ';'
         pass
 
     def compile_while(self):

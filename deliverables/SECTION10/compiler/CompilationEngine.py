@@ -11,7 +11,7 @@ from KeywordType import K_CLASS, K_METHOD, K_FUNCTION, \
 from JackTokenizer import JackTokenizer
 from Structure import SKeyword, SSymbol, SIntegerConstant, \
     SStringConstant, SIdentifier, SClass, SClassVarDec
-
+from Logic import XmlLogic
 from Utils import Utils, Log
 
 
@@ -57,6 +57,10 @@ class CompilationEngine:
         # # }
         # tkn.advance()
         # sclass.add(SSymbol(tkn.symbol()))
+
+        logic = XmlLogic(self.__basename)
+        sclass.operate(logic)
+        logic.write()
 
     def compile_class_var_dec(self):
         tkn = self.__tokenizer

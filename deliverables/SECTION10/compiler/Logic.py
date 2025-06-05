@@ -18,19 +18,16 @@ class Logic(metaclass = ABCMeta):
 
 
 class XmlLogic(Logic):
-
     def __init__(self, filename):
         self.__filename = filename
         self.__root = None
         self.__current = None
         
     def logic_term(self, term):
-        print(term.name)
         elm = ET.SubElement(self.__current, term.name)
-        elm.text = term.value
+        elm.text = f" {term.value} "
 
     def logic_node(self, node):
-        print(node.name)
         pre = None
         if not self.__current:
             pre = ET.Element(node.name)
@@ -43,9 +40,10 @@ class XmlLogic(Logic):
         self.__current = pre
 
     def write(self):
-        doc = minidom.parseString(ET.tostring(self.__current, 'utf-8'))
+        doc = minidom.parseString(ET.tostring(self.__current, 'utf-8', \
+                                              xml_declaration=False))
         with open(f"{self.__filename}.xml", 'w') as fo:
-            doc.writexml(fo, encoding='utf-8', newl="\n", indent="", addindent="    ")
+            doc.writexml(fo, encoding='utf-8', newl="\n", indent="", addindent="  ")
 
 if __name__ == '__main__':
     c = SClass()

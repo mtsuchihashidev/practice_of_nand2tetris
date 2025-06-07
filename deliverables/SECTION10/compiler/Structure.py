@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from abc import ABCMeta, abstractmethod
+import sys
 
 # from Base import Term, Node
 from Base import Structure
@@ -34,6 +35,7 @@ class Term(Structure):
     def __init__(self, name, value):
         self.__name = name
         self.__value = value
+        # print(f"{self.__class__.__name__}({self.__name},'{self.__value}')", file=sys.stderr)
 
     def operate(self, logic):
         logic.logic_term(self)
@@ -42,7 +44,6 @@ class Term(Structure):
         return None
 
     def add(self, child: Structure)->bool:
-        print(f"Term.add: {child}")
         return False
     
     def remove(self, child: Structure)->bool:
@@ -119,7 +120,7 @@ class SVarDec(Node):
 
 class SStatements(Node):
     def __init__(self):
-        super().__init__('statement')
+        super().__init__('statements')
 
 class SLetStatement(Node):
     def __init__(self):
@@ -136,6 +137,10 @@ class SIfStatement(Node):
 class SWhileStatement(Node):
     def __init__(self):
         super().__init__('whileStatement')
+
+class SReturnStatement(Node):
+    def __init__(self):
+        super().__init__('returnStatement')
 
 class SExpression(Node):
     def __init__(self):

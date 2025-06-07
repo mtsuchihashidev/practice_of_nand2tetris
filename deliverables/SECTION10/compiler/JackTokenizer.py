@@ -41,7 +41,7 @@ __KEYWORD__ = {
     }
 
 RX_STR_CONST = re.compile(r'"[^"]*"', re.S)
-RX_IDENTIFIER = re.compile(r'[A-Za-z][0-9A-Za-z]+', re.S)
+RX_IDENTIFIER = re.compile(r'[A-Za-z][0-9A-Za-z]*', re.S)
 RX_NUMBER = re.compile(r'[0-9]+', re.S)
 
 class Tokenizer:
@@ -205,7 +205,6 @@ class JackTokenizer:
         tokenizer = Tokenizer(contents)
         tokenizer.tokenize()
         self.__tokens = tokenizer.get_tokens()
-        print(self.__tokens)
         self.__cidx = -1
         self.__capacity = len(self.__tokens)
         self.__ctoken = ''
@@ -221,32 +220,37 @@ class JackTokenizer:
         self.__cidx += 1
         self.__ctoken = self.__tokens[self.__cidx]
 
+    def dry_advance(self)->str:
+        return self.__tokens[self.__cidx + 1]
+
     def token_type(self)->TokenType:
         if self.__cidx >= self.__capacity:
             raise Exception('no more token')
-        if self.__ctoken in __KEYWORD__.keys():
+        if self.__is_keyword():
             return T_KEYWORD
-        elif self.__ctoken in __SYMBOL__:
+        elif self.__is_symbol():
             return T_SYMBOL
-        elif RX_STR_CONST.match(self.__ctoken, re.S):
+        elif self.__is_str_const():
             return T_STRING_CONST
-        elif RX_IDENTIFIER.match(self.__ctoken, re.S):
+        elif self.__is_identifier():
             return T_IDENTIFIER
-        elif mo := RX_NUMBER.match(self.__ctoken, re.S):
-            n = int(mo[0])
-            if n >= 0 and n <= 32767:
+        elif self.__is_int_const():
                 return T_INT_CONST
-        raise Exepction(f"no support: {self.__ctoken}")
+        raise Exception(f"no support: [{self.__ctoken}]")
 
     def keyword(self)->KeywordType:
         if self.__ctoken not in __KEYWORD__.keys():
-            raise Exception(f"no support: {self.__ctoken}")
+            raise Exception(f"require no keyword: {self.__ctoken}")
         return __KEYWORD__[self.__ctoken]
 
     def symbol(self)->str:
+        if not self.__is_symbol():
+            raise Exception(f"require no symbol: [{self.__ctoken}]")
         return self.__ctoken
 
     def identifier(self)->str:
+        if not self.__is_identifier():
+            raise Exception(f"require no identifier: [{self.__ctoken}]")
         return self.__ctoken
 
     def int_val(self)->int:
@@ -259,10 +263,28 @@ class JackTokenizer:
         return n
 
     def string_val(self)->str:
+        if not self.__is_str_const():
+            raise Exception(f"require no str_const: [{self.__ctoken}]")
         # TODO remove "?
         return self.__ctoken
 
+    def __is_keyword(self):
+        return self.__ctoken in __KEYWORD__.keys()
 
+    def __is_symbol(self):
+        return self.__ctoken in __SYMBOL__
 
+    def __is_str_const(self):
+        return RX_STR_CONST.match(self.__ctoken)
+    
+    def __is_identifier(self):
+        return RX_IDENTIFIER.match(self.__ctoken)
+
+    def __is_int_const(self):
+        mo = RX_NUMBER.match(self.__ctoken)
+        if not mo:
+            return False
+        n = int(mo[0])
+        return n >= 0 and n <= 32767
 
 # EOF

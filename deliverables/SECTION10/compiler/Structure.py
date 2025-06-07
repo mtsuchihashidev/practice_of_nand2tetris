@@ -87,7 +87,7 @@ class SIntegerConstant(Term):
         super().__init__('integerConstant', int_const)
 
 class SStringConstant(Term):
-    def __init__(self, str_cosnt):
+    def __init__(self, str_const):
         super().__init__('stringConstant', str_const)
     
 class SIdentifier(Term):

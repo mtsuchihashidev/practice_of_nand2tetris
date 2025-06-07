@@ -70,6 +70,18 @@ class Tokenizer:
                 self.set_token(self.get(i))
                 i += 1
                 continue
+   
+            j = self.fetch_integer(i)
+            if j >= i:
+                # print(f"identifier: (i, j) = ({i}, {j}): {self.fetch(i, j)}", file=sys.stderr)
+                if j > i:
+                    self.set_token(self.fetch(i, j))
+                    i = j + 1
+                else:
+                    self.set_token(self.get(i))
+                    i = i + 1
+                continue
+   
             j = self.fetch_identifier(i)
             if j >= i:
                 # print(f"identifier: (i, j) = ({i}, {j}): {self.fetch(i, j)}", file=sys.stderr)
@@ -166,6 +178,18 @@ class Tokenizer:
             return -1
         return mo.span()[1]
 
+    def fetch_integer(self, s:int)->int:
+        c0 = self.get(s)
+        if not self.is_number_letter(c0):
+            return -1
+        j = s + 1
+        while j < self.limit -1:
+            c1 = self.get(j)
+            if not self.is_number_letter(c1):
+                return j - 1
+            j += 1
+        return -1
+
     def fetch_identifier(self, s:int)->int:
         c0 = self.get(s)
         if not self.is_upper_letter(c0) \
@@ -208,6 +232,7 @@ class JackTokenizer:
         self.__cidx = -1
         self.__capacity = len(self.__tokens)
         self.__ctoken = ''
+        print(self.__tokens, file=sys.stderr)
 
 
     def __is_symbol(self, char:str)->bool:
@@ -254,7 +279,7 @@ class JackTokenizer:
         return self.__ctoken
 
     def int_val(self)->int:
-        mo = RX_NUMBER.match(self.__ctoken, re.S)
+        mo = RX_NUMBER.match(self.__ctoken)
         if not mo:
             raise Exception(f"no support: {self.__ctoken}")
         n = int(mo[0])
@@ -265,8 +290,8 @@ class JackTokenizer:
     def string_val(self)->str:
         if not self.__is_str_const():
             raise Exception(f"require no str_const: [{self.__ctoken}]")
-        # TODO remove "?
-        return self.__ctoken
+        # TODO remove "? -> remove!
+        return self.__ctoken[1:-1]
 
     def __is_keyword(self):
         return self.__ctoken in __KEYWORD__.keys()

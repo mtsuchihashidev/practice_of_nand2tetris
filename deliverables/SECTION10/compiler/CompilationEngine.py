@@ -139,6 +139,7 @@ class CompilationEngine:
             kwd = tkn.keyword()
             ssbd = SSubroutineDec()
             self.__root.add(ssbd)
+            print(f"     : compile_subroutine.keyword: {tkn.keyword()}", file=sys.stderr)
             if kwd == K_CONSTRUCTOR:
                 print(f"     : compile_subroutine.constructor", file=sys.stderr)
                 ssbd.add(SKeyword('constructor'))
@@ -149,7 +150,7 @@ class CompilationEngine:
                 print(f"     : compile_subroutine.method", file=sys.stderr)
                 ssbd.add(SKeyword('method'))
             else:
-                raise Exception()
+                raise Exception(f"no support: {tkn.keyword()}")
 
             # ('void', type)
             tkn.advance()
@@ -306,7 +307,7 @@ class CompilationEngine:
 
         sstmts = SStatements()
         self.__root.add(sstmts)
-        
+        print(f"START: compile_statements", file=sys.stderr)
 
         def is_statement():
             if not tkn.token_type() == T_KEYWORD:
@@ -319,19 +320,28 @@ class CompilationEngine:
         # letStatement | ifStatement | whileStatement | doStatement | returnStatement
         pre = self.__root
         self.__root = sstmts
+        print(f"LOOPS: compile_statements", file=sys.stderr)
         while is_statement():
             kwd = tkn.keyword()
+            print(f"     : compile_statements.keyword: {kwd}", file=sys.stderr)
             if kwd == K_LET:
+                print(f"CALL : compile_statements: compile_let", file=sys.stderr)
                 self.compile_let()
             elif kwd == K_IF:
+                print(f"CALL : compile_statements: compile_if", file=sys.stderr)
                 self.compile_if()
             elif kwd == K_WHILE:
+                print(f"CALL : compile_statements: compile_while", file=sys.stderr)
                 self.compile_while()
             elif kwd == K_DO:
+                print(f"CALL : compile_statements: compile_do", file=sys.stderr)
                 self.compile_do()
             elif kwd == K_RETURN:
+                print(f"CALL : compile_statements: compile_return", file=sys.stderr)
                 self.compile_return()
         self.__root = pre
+        print(f"LOOPE: compile_statements", file=sys.stderr)
+        print(f"END  : compile_statements", file=sys.stderr)
 
     def __call(self, container:Node, fn):
         pre = self.__root
@@ -345,40 +355,50 @@ class CompilationEngine:
         tkn = self.__tokenizer
         lstmt = SLetStatement()
         self.__root.add(lstmt)
+        print(f"START: compile_let", file=sys.stderr)
         
         # 'let' varName ('[' expression ']' )? '=' expression ';'
 
         # 'let'
         lstmt.add(SKeyword('let'))
+        print(f"     : compile_let.keyword: let", file=sys.stderr)
 
         # varName
         tkn.advance()
         lstmt.add(SIdentifier(tkn.identifier()))
+        print(f"     : compile_let.varName: {tkn.identifier()}", file=sys.stderr)
         tkn.advance()
         if tkn.token_type() == T_SYMBOL and tkn.symbol() == '[':
             # '['
             lstmt.add(SSymbol(tkn.symbol()))
-            # expression
+            print(f"     : compile_let.symbol[[]: {tkn.symbol()}", file=sys.stderr)
             tkn.advance()
-            pre = self.__root
-            self.__root = lstmt
-            self.compile_expression()
-            self.__root = pre
+            # expression
+            print(f"CALL : compile_let[compile_expression]", file=sys.stderr)
+            self.__call(lstmt, self.compile_expression)
+            # pre = self.__root
+            # self.__root = lstmt
+            # self.compile_expression()
+            # self.__root = pre
+
             # ']'
             lstmt.add(SSymbol(tkn.symbol()))
-
+            print(f"     : compile_let.symbol[]]: {tkn.symbol()}", file=sys.stderr)
             tkn.advance()
         # '='
         lstmt.add(SSymbol(tkn.symbol()))
-        # expression
+        print(f"     : compile_let.symbol[=]: {tkn.symbol()}", file=sys.stderr)
         tkn.advance()
+        # expression
+        print(f"CALL : compile_let[compile_expression]", file=sys.stderr)
         self.__call(lstmt, self.compile_expression)
         # ';'
         lstmt.add(SSymbol(tkn.symbol()))
-
+        print(f"     : compile_let.symbol[;]: {tkn.symbol()}", file=sys.stderr)
         tkn.advance()
+
+        print(f"END  : compile_let", file=sys.stderr)
         return 
-        
 
     def compile_do(self):
         """do文をコンパイルする
@@ -491,38 +511,51 @@ class CompilationEngine:
         tkn = self.__tokenizer
         istmt = SIfStatement()
         self.__root.add(istmt)
+        print(f"START: compile_if", file=sys.stderr)
 
         # 'if'
         istmt.add(SKeyword('if'))
+        print(f"     : compile_if.keyword: if", file=sys.stderr)
+        tkn.advance()
         # '('
-        tkn.advance()
         istmt.add(SSymbol(tkn.symbol()))
-        # expression
+        print(f"     : compile_if.symbol: {tkn.symbol()}", file=sys.stderr)
         tkn.advance()
+        # expression
+        print(f"     : compile_if.call[compile_expression]", file=sys.stderr)
         self.__call(istmt, self.compile_expression)
         # ')'
         istmt.add(SSymbol(tkn.symbol()))
+        print(f"     : compile_if.symbol: {tkn.symbol()}", file=sys.stderr)
+        tkn.advance()
         # '{'
-        tkn.advance()
         istmt.add(SSymbol(tkn.symbol()))
-        # statements
+        print(f"     : compile_if.symbol: {tkn.symbol()}", file=sys.stderr)
         tkn.advance()
+        # statements
+        print(f"     : compile_if.call[compile_statements]", file=sys.stderr)
         self.__call(istmt, self.compile_statements)
         # '}'
         istmt.add(SSymbol(tkn.symbol()))
-        # else
+        print(f"     : compile_if.symbol: {tkn.symbol()}", file=sys.stderr)
         tkn.advance()
+        # else
         if tkn.token_type() != T_KEYWORD or tkn.keyword() != K_ELSE:
+            print(f"END  : compile_if", file=sys.stderr)
             return
         istmt.add(SKeyword('else'))
+        print(f"     : compile_if.keyword: else", file=sys.stderr)
+        tkn.advance()
         # '{'
-        tkn.advance()
         istmt.add(SSymbol(tkn.symbol()))
-        # statements
+        print(f"     : compile_if.symbol: {tkn.symbol()}", file=sys.stderr)
         tkn.advance()
+        # statements
+        print(f"     : compile_if.call[compile_statements]", file=sys.stderr)
         self.__call(istmt, self.compile_statements)
         # '}'
         istmt.add(SSymbol(tkn.symbol()))
+        print(f"     : compile_if.symbol: {tkn.symbol()}", file=sys.stderr)
         tkn.advance()
 
     def compile_expression(self):
@@ -532,19 +565,34 @@ class CompilationEngine:
         tkn = self.__tokenizer
         exps = SExpression()
         self.__root.add(exps)
-
+        print(f"START: compile_expression", file=sys.stderr)
+              
         # <<<op>>>
         # '+' | '-' | '*' | '/' | '&' | '|' | '<' | '>' | '='
 
+        print(f"CALL : compile_expression[compile_term]", file=sys.stderr)
         self.__call(exps, self.compile_term)
 
+        print(f"     : compile_expression.token_type: {tkn.token_type()}", file=sys.stderr)
         if tkn.token_type() == T_SYMBOL \
            and tkn.symbol() in ('+', '-', '*', '/', '&', \
                                    '|', '<', '>', '='):
-            exps.add(SSymbol(tkn.symbol()))
+            # parse
+            if tkn.symbol() == '<':
+                parsed_symbol = '&lt;'
+            elif tkn.symbol() == '&':
+                parsed_symbol = '&amp;'
+            elif tkn.symbol() == '>':
+                parsed_symbol = '&gt;'
+            else:
+                parsed_symbol = tkn.symbol()
+            exps.add(SSymbol(parsed_symbol))
+            print(f"     : compile_expression.symbol: {parsed_symbol}", file=sys.stderr)
             tkn.advance()
+            print(f"CALL : compile_expression[compile_term]", file=sys.stderr)
             self.__call(exps, self.compile_term)
-            return
+        print(f"END  : compile_expression", file=sys.stderr)
+        return
 
     def __is_next_term(self)->bool:
         tkn = self.__tokenizer
@@ -579,14 +627,19 @@ class CompilationEngine:
         trm = STerm()
         self.__root.add(trm)
 
+        print(f"START: compile_term", file=sys.stderr)
         ttype = tkn.token_type()
         if ttype == T_INT_CONST:
-            trm.add(SIntegerConstant(tkn.int_const()))
+            print(f"     : compile_term.int_const: {tkn.int_val()}", file=sys.stderr)
+            trm.add(SIntegerConstant(tkn.int_val()))
             tkn.advance()
+            print(f"END  : compile_term", file=sys.stderr)
             return
         elif ttype == T_STRING_CONST:
-            trm.add(SStringConstant(tkn.string_const()))
+            print(f"     : compile_term.str_const: {tkn.string_val()}", file=sys.stderr)
+            trm.add(SStringConstant(tkn.string_val()))
             tkn.advance()
+            print(f"END  : compile_term", file=sys.stderr)
             return
         elif ttype == T_KEYWORD:
             valid_keywords = (K_TRUE, K_FALSE, K_NULL, K_THIS)
@@ -594,14 +647,18 @@ class CompilationEngine:
                 raise Exception()
             if tkn.keyword() == K_TRUE:
                 trm.add(SKeyword('true'))
+                print(f"     : compile_term.keyword: true", file=sys.stderr)
             elif tkn.keyword() == K_FALSE:
-                trm.add(SKeyword('fase'))
+                trm.add(SKeyword('false'))
+                print(f"     : compile_term.keyword: false", file=sys.stderr)
             elif tkn.keyword() == K_NULL:
                 trm.add(SKeyword('null'))
+                print(f"     : compile_term.keyword: null", file=sys.stderr)
             elif tkn.keyword() == K_THIS:
                 trm.add(SKeyword('this'))
-                                                            
+                print(f"     : compile_term.keyword: this", file=sys.stderr)
             tkn.advance()
+            print(f"END  : compile_term", file=sys.stderr)
             return
         elif ttype == T_IDENTIFIER:
             # varName | varName '[' expression ']' | subroutineCall |
@@ -614,38 +671,64 @@ class CompilationEngine:
 
             # varName | subroutineName | className
             trm.add(SIdentifier(tkn.identifier()))
+            print(f"     : compile_term.identifier: {tkn.identifier()}", file=sys.stderr)
             tkn.advance()
             # is SYMBOL '[' or '(' or '.' ?
             if tkn.token_type() != T_SYMBOL or tkn.symbol() not in ('[', '(', '.'):
+                print(f"END  : compile_term", file=sys.stderr)
                 return
             trm.add(SSymbol(tkn.symbol()))
+            pre_symbol = tkn.symbol()
             tkn.advance()
             # '[' ?
-            if tkn.symbol() == '[':
+            if pre_symbol == '[':
+                print(f"     : compile_term.symbol: [", file=sys.stderr)
                 self.__call(trm, self.compile_expression)
+                print(f"     : compile_term.call[compile_expression]", file=sys.stderr)
                 # ']'
+                if tkn.token_type() != T_SYMBOL or tkn.symbol() != ']':
+                    raise Exception(f"expected ']' but '{tkn.symbol()}'")
                 trm.add(SSymbol(tkn.symbol()))
+                print(f"     : compile_term.symbol: {tkn.symbol()}", file=sys.stderr)
                 tkn.advance()
+                print(f"END  : compile_term", file=sys.stderr)
                 return
             # '('
-            if tkn.symbol() == '(':
+            if pre_symbol == '(':
+                print(f"     : compile_term.symbol: (", file=sys.stderr)
                 self.__call(trm, self.compile_expression_list)
+                print(f"     : compile_term.call[compile_expression_list]", file=sys.stderr)
                 # ')'
+                if tkn.token_type() != T_SYMBOL or tkn.symbol() != ')':
+                    raise Exception(f"expected ')' but '{tkn.symbol()}'")
                 trm.add(SSymbol(tkn.symbol()))
+                print(f"     : compile_term.symbol: {tkn.symbol()}", file=sys.stderr)
                 tkn.advance()
+                print(f"END  : compile_term", file=sys.stderr)
                 return
-            if tkn.symbol() == '.':
+            if pre_symbol == '.':
+                print(f"     : compile_term.symbol: .", file=sys.stderr)
                 # subroutineName
                 trm.add(SIdentifier(tkn.identifier()))
+                print(f"     : compile_term.subrutineName: {tkn.identifier()}", file=sys.stderr)
                 tkn.advance()
                 # '('
+                if tkn.token_type() != T_SYMBOL or tkn.symbol() != '(':
+                    raise Exception(f"expected '(' but '{tkn.symbol()}'")
                 trm.add(SSymbol(tkn.symbol()))
+                print(f"     : compile_term.symbol: {tkn.symbol()}", file=sys.stderr)
                 tkn.advance()
                 # expressionList
                 self.__call(trm, self.compile_expression_list)
+                print(f"     : compile_term.call[compile_expression_list]", file=sys.stderr)
                 # ')'
+                if tkn.token_type() != T_SYMBOL or tkn.symbol() != ')':
+                    raise Exception(f"expected ')' but '{tkn.symbol()}'")
                 trm.add(SSymbol(tkn.symbol()))
+                print(f"     : compile_term.symbol: {tkn.symbol()}", file=sys.stderr)
                 tkn.advance()
+                print(f"END  : compile_term", file=sys.stderr)
+                return
             raise Exception()            
         elif ttype == T_SYMBOL:
             symbol = tkn.symbol()
@@ -653,15 +736,35 @@ class CompilationEngine:
                 raise Exception(f"term not support: [{symbol}]")
             # '(' expression ')' |
             if symbol == '(':
+                # '('
+                if tkn.token_type() != T_SYMBOL or tkn.symbol() != '(':
+                    raise Exception(f"expected '(' but '{tkn.symbol()}'")
                 trm.add(SSymbol(symbol))
+                print(f"     : compile_term.symbol[(]: {tkn.symbol()}", file=sys.stderr)
                 tkn.advance()
+
+                # expression
                 self.__call(trm, self.compile_expression)
+                print(f"     : compile_term.call[compile_expression]", file=sys.stderr)
+
+                # ")"
+                if tkn.token_type() != T_SYMBOL or tkn.symbol() != ')':
+                    raise Exception(f"expected ')' but '{tkn.symbol()}'")
+                trm.add(SSymbol(tkn.symbol()))
+                print(f"     : compile_term.symbol[)]: {tkn.symbol()}", file=sys.stderr)
+                tkn.advance()
+                print(f"END  : compile_term", file=sys.stderr)
                 return
             # unaryOp term
             if symbol in ('-', '~'):
+                if tkn.token_type() != T_SYMBOL or tkn.symbol() not in ('-', '~'):
+                    raise Exception(f"expected '-' or '~'  but '{tkn.symbol()}'")
                 trm.add(SSymbol(symbol))
+                print(f"     : compile_term.symbol[-|~]: {tkn.symbol()}", file=sys.stderr)
                 tkn.advance()
                 self.__call(trm, self.compile_term)
+                print(f"     : compile_term.call[compile_term]", file=sys.stderr)
+                print(f"END  : compile_term", file=sys.stderr)
                 return
             raise Exception()
         else:

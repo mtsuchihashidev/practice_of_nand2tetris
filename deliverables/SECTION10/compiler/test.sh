@@ -20,9 +20,10 @@ echo
 
 echo "Square---------------------------------"
 python3 JackAnalyzer.py ../assets/Square 2> /dev/null
-python3 ediff.py .//Main.xml.dest ./Main.xml
-python3 ediff.py .//Square.xml.dest ./Square.xml
-python3 ediff.py .//SquareGame.xml.dest ./SquareGame.xml 
+python3 ediff.py ./Square/Main.xml.dest ./Main.xml
+python3 ediff.py ./Square/Square.xml.dest ./Square.xml
+python3 ediff.py ./Square/SquareGame.xml.dest ./SquareGame.xml 
 
+rm *.xml
 
 # EOF

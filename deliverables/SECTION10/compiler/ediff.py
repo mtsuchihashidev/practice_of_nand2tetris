@@ -7,8 +7,6 @@ from os.path import basename
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:
-        # expected_file = sys.argv[1] or ''
-        # actual_file = sys.argv[2] or ''
         file_base = sys.argv[1] or ''
         expected_file = f"{file_base}.xml.dest"
         actual_file = f"{file_base}.xml"

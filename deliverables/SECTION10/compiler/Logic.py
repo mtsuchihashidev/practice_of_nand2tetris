@@ -20,7 +20,7 @@ class Logic(metaclass = ABCMeta):
     def logic_node(self, node:Node):
         pass
 
-
+# can't execute. i guess i foot ElementTree's bug.
 class XmlLogic(Logic):
     def __init__(self, filename):
         self.__filename = filename
@@ -30,9 +30,6 @@ class XmlLogic(Logic):
     def logic_term(self, term):
         elm = ET.SubElement(self.__current, term.name)
         elm.text = f" {term.value} "
-
-        print(f"self.__current: {self.__current}")
-        print(f"***** {elm} ******")
 
     def logic_node(self, node):
         pre = None
@@ -60,6 +57,7 @@ class XmlLogic(Logic):
         with open(f"{self.__filename}.xml", 'w') as fo:
             doc.writexml(fo, encoding='utf-8', newl="\n", indent="", addindent="  ")
 
+# this is normaly executing.
 class XmlLogic2(Logic):
     def __init__(self, filename):
         self.__filename = filename
@@ -88,8 +86,10 @@ class XmlLogic2(Logic):
         with open(f"{self.__filename}.xml", 'w', encoding='utf-8') as fo:
             fo.write(self.__contents)
 
+
             
 if __name__ == '__main__':
+    # simply testing
     c = SClass()
 
     # class
@@ -106,7 +106,6 @@ if __name__ == '__main__':
     cvd.add(SIdentifier('test'))
     cvd.add(SSymbol(';'))
 
-    
     # subroutineDec
     sd = SSubroutineDec()
     c.add(sd)
@@ -159,24 +158,8 @@ if __name__ == '__main__':
 
     dstmt.add(SKeyword('do'))
 
-    print("--------------------")
-    print(c)
-    print(stmt)
-    for cc in stmt.get_children():
-        print(cc)
-    print("--------------------")
     xml = XmlLogic2("test")
     c.operate(xml)
     xml.write()
-    # xml.write_element(stmt)
-
-
-
-
-
-
-
-
-
 
 # EOF

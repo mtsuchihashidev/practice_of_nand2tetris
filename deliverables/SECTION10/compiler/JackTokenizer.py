@@ -55,25 +55,21 @@ class Tokenizer:
         while i < self.limit:
             j = self.fetch_comment(i)
             if j >= i:
-                # print(f"comment: (i, j) = ({i}, {j}): |{self.fetch(i,j)}|", file=sys.stderr)
                 i = j + 1
                 continue
             j = self.fetch_string_const(i)
             if j >= i:
-                # print(f"string_const: (i, j) = ({i}, {j}): |{self.fetch(i, j )}|", file=sys.stderr)
                 self.set_token(self.fetch(i, j))
                 i = j + 1
                 continue
             j = self.fetch_symbol(i)
             if j >= i:
-                # print(f"symbol: (i, j) = ({i}, {j}): {self.get(i)}", file=sys.stderr)
                 self.set_token(self.get(i))
                 i += 1
                 continue
    
             j = self.fetch_integer(i)
             if j >= i:
-                # print(f"identifier: (i, j) = ({i}, {j}): {self.fetch(i, j)}", file=sys.stderr)
                 if j > i:
                     self.set_token(self.fetch(i, j))
                     i = j + 1
@@ -84,7 +80,6 @@ class Tokenizer:
    
             j = self.fetch_identifier(i)
             if j >= i:
-                # print(f"identifier: (i, j) = ({i}, {j}): {self.fetch(i, j)}", file=sys.stderr)
                 if j > i:
                     self.set_token(self.fetch(i, j))
                     i = j + 1
@@ -94,7 +89,6 @@ class Tokenizer:
                 continue
             j = self.fetch_blank(i)
             if j >= i:
-                # print(f"blank: (i, j) = ({i}, {j})", file=sys.stderr)
                 i = j
                 continue
             i += 1
@@ -103,7 +97,6 @@ class Tokenizer:
         return self.__tokens
 
     def set_token(self, token:str):
-        # print(token, file=sys.stderr)
         self.__tokens.append(token)
 
     def get(self, i:int)->str:
@@ -232,8 +225,6 @@ class JackTokenizer:
         self.__cidx = -1
         self.__capacity = len(self.__tokens)
         self.__ctoken = ''
-        print(self.__tokens, file=sys.stderr)
-
 
     def __is_symbol(self, char:str)->bool:
         return char in __SYMBOL__

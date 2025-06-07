@@ -20,7 +20,6 @@ from Logic import XmlLogic2
 from Utils import Utils, Log
 
 
-# logger = Log(True)
 
 class CompilationEngine:
     

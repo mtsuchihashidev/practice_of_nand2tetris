@@ -100,30 +100,38 @@ class CompilationEngine:
 
     def __compile_type(self, node):
         tkn = self.__tokenizer
+        print(f"START: __compile_type", file=sys.stderr)
         if tkn.token_type() == T_KEYWORD:
             kwd = tkn.keyword()
             if kwd == K_INT:
+                print(f"     : __compile_type: ini", file=sys.stderr)
                 node.add(SKeyword('int'))
             elif kwd == K_CHAR:
+                print(f"     : __compile_type: char", file=sys.stderr)
                 node.add(SKeyword('char'))
             elif kwd == K_BOOLEAN:
+                print(f"     : __compile_type: boolean", file=sys.stderr)
                 node.add(SKeyword('boolean'))
             else:
                 tkn.advance()
+                print(f"END  : __compile_type: False", file=sys.stderr)
                 return False
         elif tkn.token_type() == T_IDENTIFIER:
+            print(f"     : __compile_type: {tkn.identifier()}", file=sys.stderr)
             node.add(SIdentifier(tkn.identifier()))
         else:
             tkn.advance()
+            print(f"END  : __compile_type: False", file=sys.stderr)
             return False
         tkn.advance()
+        print(f"END  : __compile_type: True", file=sys.stderr)
         return True
 
     def compile_subroutine(self):
         """メソッド、ファンクション、コンストラクタをコンパイルする
         """
         tkn = self.__tokenizer
-#        logger.debug("CALLED compile_subroutine")
+        print(f"START: compile_subroutine.subroutineName: {tkn.token_type()}", file=sys.stderr)
         while True:
             # ('constructor', 'function', 'method')
             if tkn.token_type() != T_KEYWORD:
@@ -132,13 +140,13 @@ class CompilationEngine:
             ssbd = SSubroutineDec()
             self.__root.add(ssbd)
             if kwd == K_CONSTRUCTOR:
-#                logger.debug("compile_subroutine.constructor")
+                print(f"     : compile_subroutine.constructor", file=sys.stderr)
                 ssbd.add(SKeyword('constructor'))
             elif kwd == K_FUNCTION:
-#                logger.debug("compile_subroutine.function")
+                print(f"     : compile_subroutine.function", file=sys.stderr)
                 ssbd.add(SKeyword('function'))
             elif kwd == K_METHOD:
-#                logger.debug("compile_subroutine.method")
+                print(f"     : compile_subroutine.method", file=sys.stderr)
                 ssbd.add(SKeyword('method'))
             else:
                 raise Exception()
@@ -148,7 +156,9 @@ class CompilationEngine:
             if tkn.token_type() == T_KEYWORD:
                 kwd = tkn.keyword()
                 if kwd == K_VOID:
+                    print(f"     : compile_subroutine.type: void", file=sys.stderr)
                     ssbd.add(SKeyword('void'))
+                    tkn.advance()
                 else:
                     if not self.__compile_type(ssbd):
                         raise Exception()
@@ -157,44 +167,53 @@ class CompilationEngine:
                     raise Exception()
 
             # subtoutineName
-            tkn.advance()
+            print(f"     : compile_subroutine.subroutineName: {tkn.token_type()}", file=sys.stderr)
             if tkn.token_type() != T_IDENTIFIER:
                 raise Exception()
+            print(f"     : compile_subroutine.subroutineName: {tkn.identifier()}", file=sys.stderr)
             ssbd.add(SIdentifier(tkn.identifier()))
             # '('
             tkn.advance()
             if tkn.token_type() != T_SYMBOL:
                 raise Exception()
+            print(f"     : compile_subroutine: (", file=sys.stderr)
             ssbd.add(SSymbol(tkn.symbol()))
 
             # parameterList
             tkn.advance()
+            print(f"     : compile_subroutine.parameterList:", file=sys.stderr)
             self.__call(ssbd, self.compile_parameter_list)
 
             # ')'
             if tkn.token_type() != T_SYMBOL:
                 raise Exception()
+            print(f"     : compile_subroutine: (", file=sys.stderr)
             ssbd.add(SSymbol(tkn.symbol()))
 
             # ** subroutineBody **
             ssbb = SSubroutineBody()
             ssbd.add(ssbb)
+            print(f"     : compile_subroutine.subroutineBody:", file=sys.stderr)
             # '{'
             tkn.advance()
             if tkn.token_type() != T_SYMBOL:
                 raise Exception()
+            print("     : compile_subroutine.subroutineBody: {", file=sys.stderr)
             ssbb.add(SSymbol(tkn.symbol()))
             # varDec*
             tkn.advance()
             self.__call(ssbb, self.compile_var_dec)
+            print(f"     : compile_subroutine.subroutineBody.varDec:", file=sys.stderr)
 
             # statements
             self.__call(ssbb, self.compile_statements)
+            print(f"     : compile_subroutine.subroutineBody.statements:", file=sys.stderr)
             # '}'
             # tkn.advance()
             if tkn.token_type() != T_SYMBOL:
                 raise Exception()
             ssbb.add(SSymbol(tkn.symbol()))
+            print("     : compile_subroutine.subroutineBody: } ", file=sys.stderr)
 
             # '} is class terminal
             tkn.advance()
@@ -218,7 +237,6 @@ class CompilationEngine:
             raise Exception
 
         # varName
-        tkn.advance()
         if tkn.token_type() != T_IDENTIFIER:
             raise Exception()
         prms.add(SIdentifier(tkn.identifier()))
@@ -232,7 +250,6 @@ class CompilationEngine:
                 raise Exception
 
             # varName
-            tkn.advance()
             if tkn.token_type() != T_IDENTIFIER:
                 raise Exception()
             prms.add(SIdentifier(tkn.identifier()))
@@ -575,7 +592,15 @@ class CompilationEngine:
             valid_keywords = (K_TRUE, K_FALSE, K_NULL, K_THIS)
             if tkn.keyword() not in valid_keywords:
                 raise Exception()
-            trm.add(SKeyword(tkn.keyword()))
+            if tkn.keyword() == K_TRUE:
+                trm.add(SKeyword('true'))
+            elif tkn.keyword() == K_FALSE:
+                trm.add(SKeyword('fase'))
+            elif tkn.keyword() == K_NULL:
+                trm.add(SKeyword('null'))
+            elif tkn.keyword() == K_THIS:
+                trm.add(SKeyword('this'))
+                                                            
             tkn.advance()
             return
         elif ttype == T_IDENTIFIER:

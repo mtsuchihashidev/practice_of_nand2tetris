@@ -20,6 +20,7 @@ from Logic import XmlLogic2
 from Utils import Utils, Log
 
 
+# logger = Log(True)
 
 class CompilationEngine:
     
@@ -101,7 +102,6 @@ class CompilationEngine:
         tkn = self.__tokenizer
         if tkn.token_type() == T_KEYWORD:
             kwd = tkn.keyword()
-            print(f"__compile_type: {tkn.keyword()}", file=sys.stderr)
             if kwd == K_INT:
                 node.add(SKeyword('int'))
             elif kwd == K_CHAR:
@@ -112,7 +112,6 @@ class CompilationEngine:
                 tkn.advance()
                 return False
         elif tkn.token_type() == T_IDENTIFIER:
-            print(f"__compile_type: {tkn.identifier()}", file=sys.stderr)
             node.add(SIdentifier(tkn.identifier()))
         else:
             tkn.advance()
@@ -124,6 +123,7 @@ class CompilationEngine:
         """メソッド、ファンクション、コンストラクタをコンパイルする
         """
         tkn = self.__tokenizer
+#        logger.debug("CALLED compile_subroutine")
         while True:
             # ('constructor', 'function', 'method')
             if tkn.token_type() != T_KEYWORD:
@@ -132,10 +132,13 @@ class CompilationEngine:
             ssbd = SSubroutineDec()
             self.__root.add(ssbd)
             if kwd == K_CONSTRUCTOR:
+#                logger.debug("compile_subroutine.constructor")
                 ssbd.add(SKeyword('constructor'))
             elif kwd == K_FUNCTION:
+#                logger.debug("compile_subroutine.function")
                 ssbd.add(SKeyword('function'))
             elif kwd == K_METHOD:
+#                logger.debug("compile_subroutine.method")
                 ssbd.add(SKeyword('method'))
             else:
                 raise Exception()
@@ -163,32 +166,37 @@ class CompilationEngine:
             if tkn.token_type() != T_SYMBOL:
                 raise Exception()
             ssbd.add(SSymbol(tkn.symbol()))
+
             # parameterList
             tkn.advance()
             self.__call(ssbd, self.compile_parameter_list)
+
             # ')'
             if tkn.token_type() != T_SYMBOL:
                 raise Exception()
             ssbd.add(SSymbol(tkn.symbol()))
 
             # ** subroutineBody **
+            ssbb = SSubroutineBody()
+            ssbd.add(ssbb)
             # '{'
             tkn.advance()
             if tkn.token_type() != T_SYMBOL:
                 raise Exception()
-            ssbd.add(SSymbol(tkn.symbol()))
+            ssbb.add(SSymbol(tkn.symbol()))
             # varDec*
             tkn.advance()
-            self.__call(ssbd, self.compile_var_dec)
+            self.__call(ssbb, self.compile_var_dec)
 
             # statements
-            self.__call(ssbd, self.compile_statements)
+            self.__call(ssbb, self.compile_statements)
             # '}'
             # tkn.advance()
             if tkn.token_type() != T_SYMBOL:
                 raise Exception()
-            ssbd.add(SSymbol(tkn.symbol()))
+            ssbb.add(SSymbol(tkn.symbol()))
 
+            # '} is class terminal
             tkn.advance()
             if tkn.token_type() == T_SYMBOL \
                and tkn.symbol() == '}':
@@ -199,13 +207,12 @@ class CompilationEngine:
         カッコ”（）”は含まない。
         """
         tkn = self.__tokenizer
+        prms = SParameterList()
+        self.__root.add(prms)
         if tkn.token_type() == T_SYMBOL and tkn.symbol() == ')':
             return
 
         # ((type varName) (',' type varName)*)?
-        prms = SParameterList()
-        self.__root.add(prms)
-
         # type
         if not self.__compile_type(prms):
             raise Exception
@@ -245,18 +252,15 @@ class CompilationEngine:
             self.__root.add(svd)
             # 'var' type varName (',' varName)* ';'
             # 'var'
-            print(f"compile_var_dec.var: {tkn.keyword()}", file=sys.stderr)
             # svd.add(SKeyword(tkn.keyword()))
             svd.add(SKeyword('var'))
             tkn.advance()
 
             # type
-            print(f"compile_var_dec.type: {tkn.token_type()}", file=sys.stderr)
             if not self.__compile_type(svd):
                 raise Exception()
 
             # varName
-            print(f"compile_var_dec.varName: {tkn.identifier()}", file=sys.stderr)
             if tkn.token_type() != T_IDENTIFIER:
                 raise Exception()
             svd.add(SIdentifier(tkn.identifier()))
@@ -311,7 +315,6 @@ class CompilationEngine:
             elif kwd == K_RETURN:
                 self.compile_return()
         self.__root = pre
-        print([c for c in self.__root.get_children()[-1].get_children()])
 
     def __call(self, container:Node, fn):
         pre = self.__root
@@ -492,7 +495,6 @@ class CompilationEngine:
         istmt.add(SSymbol(tkn.symbol()))
         # else
         tkn.advance()
-        print(tkn.token_type())
         if tkn.token_type() != T_KEYWORD or tkn.keyword() != K_ELSE:
             return
         istmt.add(SKeyword('else'))
@@ -530,7 +532,6 @@ class CompilationEngine:
     def __is_next_term(self)->bool:
         tkn = self.__tokenizer
         ttype = tkn.token_type()
-        print(f"__is_next_term / token_type: {ttype}")
         if ttype in (T_INT_CONST, T_STRING_CONST):
             return True
         elif ttype == T_KEYWORD:
@@ -539,12 +540,10 @@ class CompilationEngine:
         elif ttype == T_IDENTIFIER:
             # valid_symbol = ('[', '.', '(')
             # next_token = tkn.dry_advance()
-            # print(f"__is_next_term / next_token: '{next_token}', {next_token in valid_symbol}")
             # return next_token in valid_symbol
             return True
         elif ttype == T_SYMBOL:
             valid_symbol = ('(', '-', '~')
-            print(f"__is_next_term / symbol: {tkn.symbol()}")
             return tkn.symbol() in valid_symbol
         return False
         
@@ -573,7 +572,6 @@ class CompilationEngine:
             tkn.advance()
             return
         elif ttype == T_KEYWORD:
-            print(f"***** {tkn.keyword()} **** ")
             valid_keywords = (K_TRUE, K_FALSE, K_NULL, K_THIS)
             if tkn.keyword() not in valid_keywords:
                 raise Exception()
@@ -657,12 +655,12 @@ class CompilationEngine:
     def compile_expression_list(self):
         """
         """
-        if not self.__is_next_term():
-            return
-        # (expression (',' expression)* )?
         tkn = self.__tokenizer
         explst = SExpressionList()
         self.__root.add(explst)
+        if not self.__is_next_term():
+            return
+        # (expression (',' expression)* )?
 
         # expression
         self.__call(explst, self.compile_expression)

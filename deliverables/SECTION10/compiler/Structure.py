@@ -108,7 +108,7 @@ class SSubroutineDec(Node):
 
 class SParameterList(Node):
     def __init__(self):
-        super().__init__('paramerterList')
+        super().__init__('parameterList')
 
 class SSubroutineBody(Node):
     def __init__(self):

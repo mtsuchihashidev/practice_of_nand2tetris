@@ -62,7 +62,7 @@ class Tokenizer:
             if j >= i:
                 # print(f"string_const: (i, j) = ({i}, {j}): |{self.fetch(i, j )}|", file=sys.stderr)
                 self.set_token(self.fetch(i, j))
-                i = j
+                i = j + 1
                 continue
             j = self.fetch_symbol(i)
             if j >= i:

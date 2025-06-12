@@ -4,13 +4,14 @@ from abc import ABCMeta, abstractmethod
 from xml.dom import minidom
 import xml.etree.ElementTree as ET
 
+from SymbolTable import SymbolTable, KIND_STATIC, KIND_FIELD, KIND_ARG, \
+    KIND_VAR
 from Structure import Term, Node, SKeyword, SSymbol, \
     SIntegerConstant, SStringConstant, SIdentifier, SClass, \
     SClassVarDec, SSubroutineDec, SParameterList, SSubroutineBody, \
     SVarDec, SStatements, SLetStatement, SDoStatement, SIfStatement, \
     SWhileStatement, SReturnStatement, SExpression, STerm, SExpressionList
-from KindType import KIND_STATIC, KIND_FIELD, KIND_ARG, KIND_VAR
-
+from VMWrite import VMWriter
 
 
 
@@ -20,6 +21,9 @@ class Logic(metaclass = ABCMeta):
         pass
     @abstractmethod
     def logic_node(self, node:Node):
+        pass
+    @abstractmethod
+    def write(self):
         pass
 
 # can't execute. i guess i foot ElementTree's bug.
@@ -88,36 +92,127 @@ class XmlLogic2(Logic):
         with open(f"{self.__filename}.xml", 'w', encoding='utf-8') as fo:
             fo.write(self.__contents)
 
-class SymbolTable(Logic):
+class SymbolTableTest(Logic):
     def __init__(self, filename):
+        self.__symbol_table = SymbolTable()
         self.__surrent_kind = None
         self.__current_id_type = ""
+        cvd = SClassVarDec()
+        pl = SParameterList()
+        vd = SVarDec()
+        self.__sym_tgt = set([cvd.name, pl.name, vd.name])
 
     def logic_term(self, term):
         pass
 
     def logic_node(self, node):
-        if node in (SClassVarDec, SVarDec):
-            term_list =  node.get_children()
-            term_kind = term_list[0].value.strip()
-            if term_kind == 'static':
-                kind = KIND_STATIC
-            elif term_kind == 'field':
-                kind = KIND_FILED
-            elif term_kind == 'var':
-                kind = KIND_VAR
+        # if node.name in self.__sym_tgt and len(node.get_children()) >= 3:
+        if len(node.get_children()) >= 2 \
+           and (node.name == 'classVarDec' \
+                or node.name == 'varDec' \
+                or node.name == 'parameterList'):
+            print(f"TARGER: {node.name}")
+            kind, id_type, name = None, "",  ""
+            term_list = node.get_children()
+            if node.name in ('classVarDec', 'varDec'):
+                if node.name == 'classVarDec':
+                    if term_list[0].value == 'static':
+                        kind = KIND_STATIC
+                    else:
+                        kind = KIND_FIELD
+                elif node.name == 'varDec':
+                    kind = KIND_VAR
+                id_type = term_list[1].value
+                name = term_list[2].value
+                self.__symbol_table.define(name, id_type, kind)
+                if len(term_list) >= 4:
+                    i = 3
+                    while term_list[i].value == ',':
+                        i += 1
+                        name = term_list[i].value
+                        self.__symbol_table.define(name, id_type, kind)
+                        i += 1
             else:
-                raise Exception()
-        elif node == SParameterList:
-            term_list =  node.get_children()
-            term_kind = term_list[0].name
-            if term_kind == 'static':
+                kind = KIND_ARG
+                id_type = term_list[0].value
+                name = term_list[1].value
+                self.__symbol_table.define(name, id_type, kind)
+                if len(term_list) >= 3:
+                    i = 2
+                    while term_list[i].value == ',':
+                        i += 1
+                        name = term_list[i].value
+                        i += 1
+                        id_type = term_list[i].value
+                        self.__symbol_table.define(name, id_type, kind)
+                        i += 1
         for child in node.get_children():
             child.operate(self)
+        
+    def write(self):
+        pass
 
-            
+class VMCompiler(Logic):
+    def __init__(self, filename):
+        self.__symbol_table = SymbolTable()
+        cvd = SClassVarDec()
+        pl = SParameterList()
+        vd = SVarDec()
+        self.__sym_tgt = set([cvd.name, pl.name, vd.name])
+        self.__vmwriter = VMWrite(filename)
 
-            
+    def logic_term(self, term):
+        pass
+
+    def logic_node(self, node):
+        if node.name == 'class':
+            # TODO initial call the class Main function main
+            self.__class_name = node.value
+
+        if len(node.get_children()) >= 2 \
+           and (node.name == 'classVarDec' \
+                or node.name == 'varDec' \
+                or node.name == 'parameterList'):
+            kind, id_type, name = None, "",  ""
+            term_list = node.get_children()
+            if node.name in ('classVarDec', 'varDec'):
+                if node.name == 'classVarDec':
+                    if term_list[0].value == 'static':
+                        kind = KIND_STATIC
+                    else:
+                        kind = KIND_FIELD
+                elif node.name == 'varDec':
+                    kind = KIND_VAR
+                id_type = term_list[1].value
+                name = term_list[2].value
+                self.__symbol_table.define(name, id_type, kind)
+                if len(term_list) >= 4:
+                    i = 3
+                    while term_list[i].value == ',':
+                        i += 1
+                        name = term_list[i].value
+                        self.__symbol_table.define(name, id_type, kind)
+                        i += 1
+            else:
+                kind = KIND_ARG
+                id_type = term_list[0].value
+                name = term_list[1].value
+                self.__symbol_table.define(name, id_type, kind)
+                if len(term_list) >= 3:
+                    i = 2
+                    while term_list[i].value == ',':
+                        i += 1
+                        name = term_list[i].value
+                        i += 1
+                        id_type = term_list[i].value
+                        self.__symbol_table.define(name, id_type, kind)
+                        i += 1
+        for child in node.get_children():
+            child.operate(self)
+        
+    def write(self):
+        print(self.__symbol_table)
+
 if __name__ == '__main__':
     # simply testing
     c = SClass()

@@ -7,7 +7,6 @@ from os.path import isdir, isfile, splitext, basename, join
 
 from JackTokenizer import JackTokenizer
 from CompilationEngine import CompilationEngine
-from Logic import XmlLogic2, VMCompiler, SymbolTableTest
 from Utils import Utils, Log
 
 
@@ -34,9 +33,6 @@ class Main:
             for filename in self.__filelist:
                 filebase = splitext(basename(filename))[0]
                 compiler = CompilationEngine(JackTokenizer(filename), filebase)
-                compiler.logic = XmlLogic2
-                # compiler.logic = SymbolTableTest
-                # compiler.logic = VMCompiler
                 compiler.compile_class()
         except Exception as e:
             raise e
@@ -51,7 +47,7 @@ class Main:
         return m.__exec()
 
 if __name__ == '__main__':
-    parser = ap(prog="JackCompiler", usage='%(prog)s filename [option]')
+    parser = ap(prog="JackAnalyzer", usage='%(prog)s filename [option]')
     parser.add_argument('filename')
 
     args = parser.parse_args()

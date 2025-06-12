@@ -43,6 +43,8 @@ class SymbolRecord:
         result = 31 * result + hash(self.__id_type)
         result = 31 * result + hash(self.__kind)
         return result
+    def __str__(self):
+        return f"{self.name: <20}{self.id_type: <20}{self.kind: <20}"
 
 class SymbolTable:
     def __init__(self):
@@ -50,7 +52,7 @@ class SymbolTable:
         self.__local_symbols = {}
         self.__counter = {
             KIND_STATIC: -1,
-            KIND_FILED: -1,
+            KIND_FIELD: -1,
             KIND_ARG: -1,
             KIND_VAR: -1
             }
@@ -62,7 +64,8 @@ class SymbolTable:
 
     def define(self, name:str, id_type:str, kind:KindType):
         self.__counter[kind] += 1
-        recored = SymbolRecored(name, id_type, kind)
+        print(f"NAME: {name}, TYPE: {id_type}, KIND: {kind}, INDEX: {self.__counter[kind]}")
+        recored = SymbolRecord(name, id_type, kind)
         if kind in (KIND_STATIC, KIND_FIELD):
             self.__class_symbols[recored] = self.__counter[kind]
         elif kind in (KIND_ARG, KIND_VAR):
@@ -105,5 +108,12 @@ class SymbolTable:
                 continue
             return v
         raise Exception()
+
+    def __str__(self):
+        ret = []
+        for i, k, v in enumerate(self.__class_symbols.items()):
+            print(i, k, v)
+            ret.append(f"{k}{v: <20}")
+        return "\n".join(ret)
 
 # EOF

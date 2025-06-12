@@ -16,17 +16,24 @@ from Structure import Term, Node, SKeyword, SSymbol, \
     SClassVarDec, SSubroutineDec, SParameterList, SSubroutineBody, \
     SVarDec, SStatements, SLetStatement, SDoStatement, SIfStatement, \
     SWhileStatement, SReturnStatement, SExpression, STerm, SExpressionList
-from Logic import XmlLogic2
+# from Logic import XmlLogic2, VMCompiler, SymbolTableTest
 from Utils import Utils, Log
 
 
 
 class CompilationEngine:
-    
+    @property
+    def logic(self):
+        return self.__logic
+    @logic.setter
+    def logic(self, cls):
+        self.__logic = cls(self.__basename)
+
     def __init__(self, tokenizer:JackTokenizer, file_basename):
         self.__tokenizer = tokenizer
         self.__basename = file_basename
         self.__root = None
+        self.__logic = None
 
     def compile_class(self):
         tkn = self.__tokenizer
@@ -60,9 +67,12 @@ class CompilationEngine:
         # # }
         sclass.add(SSymbol(tkn.symbol()))
 
-        logic = XmlLogic2(self.__basename)
-        sclass.operate(logic)
-        logic.write()
+        # logic = XmlLogic2(self.__basename)
+        # logic = SymbolTableTest(self.__basename)
+        # sclass.operate(logic)
+        # logic.write()
+        sclass.operate(self.__logic)
+        self.__logic.write()
 
     def compile_class_var_dec(self):
         tkn = self.__tokenizer

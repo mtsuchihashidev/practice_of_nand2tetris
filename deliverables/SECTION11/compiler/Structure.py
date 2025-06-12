@@ -9,14 +9,11 @@ from Base import Structure
 
 class Term(Structure):
     @property
-    def name(self):
-        return self.__name
-    @property
     def value(self):
         return self.__value
 
     def __init__(self, name, value):
-        self.__name = name
+        super().__init__(name)
         self.__value = value
 
     def operate(self, logic):
@@ -32,12 +29,8 @@ class Term(Structure):
         return False
 
 class Node(Structure):
-    @property
-    def name(self):
-        return self.__name
-
     def __init__(self, name):
-        self.__name = name
+        super().__init__(name)
         self.__children = []
 
     def operate(self, logic):
